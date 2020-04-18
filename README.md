@@ -3,6 +3,7 @@
 Утилита для выявления аномалий на биржах
 
 ## Структура
+```bash
 Excthulhu
 ├── README.md
 ├── cthulhu_src
@@ -22,3 +23,4 @@ Excthulhu
 └── tests               -- Авто и юнит тесты
     ├── auto_tests
     └── unit_tests
+```
