@@ -16,6 +16,17 @@ class BaseExchange:
     async def close(self):
         await self._instance.close()
 
+    async def state_preparation(self, symbol):
+
+        result = await self._instance.fetch_order_book(symbol, limit=5)
+        pair = symbol.split('/')
+
+        try:
+            price = result['bids'][0][0]
+            return f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price
+        except IndexError:
+            return None
+
     async def fetch_prices(self):
         markets = await self._instance.fetch_markets()
         symbols = [
@@ -24,18 +35,11 @@ class BaseExchange:
         ]
 
         promises = [
-            self._instance.fetch_order_book(symbol, limit=5)
+            self.state_preparation(symbol)
             for symbol in symbols
         ]
 
-        results = await asyncio.gather(*promises, return_exceptions=True)
-        prices = []
-        for i, result in enumerate(results):
-            if len(result['bids']) == 0 or len(result['bids'][0]) == 0:
-                continue
+        results = set(await asyncio.gather(*promises, return_exceptions=True))
+        results.remove(None)
 
-            pair = symbols[i].split('/')
-            price = result['bids'][0][0]
-            prices.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price))
-
-        return prices
+        return results
