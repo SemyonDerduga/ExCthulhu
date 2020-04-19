@@ -3,9 +3,11 @@ import asyncio
 import ccxt.async_support as ccxt
 
 
-class BaseExchanger:
+class BaseExchange:
     currency_blacklist = []
-    opts = {}
+    opts = {
+        'enableRateLimit': True,
+    }
     name = ''
 
     def __init__(self):
