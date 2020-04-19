@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import ccxt.async_support as ccxt
-log = logging.getLogger('excthulhu')
 
 class BaseExchange:
     currency_blacklist = []
@@ -10,6 +9,7 @@ class BaseExchange:
         'enableRateLimit': True,
     }
     name = ''
+    log = logging.getLogger('excthulhu')
 
     def __init__(self):
         self._instance = getattr(ccxt, self.name)(self.opts)
@@ -23,7 +23,7 @@ class BaseExchange:
 
         try:
             price = result['bids'][0][0]
-            log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
+            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
             return f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price
         except IndexError:
             return None
@@ -35,7 +35,7 @@ class BaseExchange:
             market['symbol']
             for market in markets
         ]
-        log.info(f'Received {len(markets)} сurrency pairs.')
+        self.log.info(f'Received {len(markets)} сurrency pairs.')
 
         promises = [
             self.state_preparation(symbol)
@@ -47,6 +47,6 @@ class BaseExchange:
             for result in await asyncio.gather(*promises)
             if result is not None
         ]
-        log.info(f'Received {len(results)} сurrency pairs exchange prices.')
+        self.log.info(f'Received {len(results)} сurrency pairs exchange prices.')
 
         return results
