@@ -34,10 +34,9 @@ class Yobit(BaseExchange):
             for market in markets
         ]
 
-        batch_count = int((len(markets) + self.max_batch_size - 1) / self.max_batch_size)
         batches = [
             symbols[i:i + self.max_batch_size]
-            for i in range(0, batch_count, self.max_batch_size)
+            for i in range(0, len(symbols), self.max_batch_size)
         ]
 
         promises = [
@@ -48,7 +47,6 @@ class Yobit(BaseExchange):
         results = [
             result
             for results in await asyncio.gather(*promises)
-            if results is not None
             for result in results
             if result is not None
         ]
