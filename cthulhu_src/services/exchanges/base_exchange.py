@@ -42,7 +42,10 @@ class BaseExchange:
             for symbol in symbols
         ]
 
-        results = set(await asyncio.gather(*promises, return_exceptions=True))
-        results.remove(None)
+        results = [
+            await result
+            for result in asyncio.as_completed(promises)
+            if result is not None
+        ]
 
         return results
