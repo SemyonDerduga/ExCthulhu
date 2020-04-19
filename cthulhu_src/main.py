@@ -10,6 +10,7 @@ from cthulhu_src.utils import logger
 
 # import commands
 from cthulhu_src.routes.find_txn import find
+from cthulhu_src.routes.exchanges import exchanges
 
 
 @click.group()
@@ -20,6 +21,7 @@ def cli(ctx):
 
 # include cli commands
 cli.add_command(find)
+cli.add_command(exchanges)
 
 
 def main():
