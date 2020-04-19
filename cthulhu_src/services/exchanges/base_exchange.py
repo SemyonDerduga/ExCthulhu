@@ -19,7 +19,6 @@ class BaseExchange:
         await self._instance.close()
 
     async def state_preparation(self, symbol):
-
         result = await self._instance.fetch_order_book(symbol, limit=5)
         pair = symbol.split('/')
 

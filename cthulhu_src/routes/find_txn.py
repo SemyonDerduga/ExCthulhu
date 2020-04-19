@@ -12,7 +12,7 @@ HELP_MAX_DEPTH = 'Max depth of transaction exchange and transfer.'
 @click.command()
 @click.pass_context
 @click.option('-d', '--max_depth', type=int, default=4, help=HELP_MAX_DEPTH)
-@click.option('-e', '--exchange_list', multiple=True, default=['binance'])
+@click.option('-e', '--exchange_list', multiple=True, default=['yobit'])
 def find(ctx, max_depth, exchange_list):
     """
         Find winning transaction and print it.
