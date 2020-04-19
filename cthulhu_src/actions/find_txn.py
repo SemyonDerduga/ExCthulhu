@@ -7,7 +7,7 @@ from cthulhu_src.services.exchanger_service import ExchangerManager
 """
 
 
-async def run(ctx, max_depth):
+async def run(ctx, max_depth, exchange_list):
     """
 
     :param ctx: click context object
@@ -15,9 +15,9 @@ async def run(ctx, max_depth):
     :return:
     """
     log = ctx.obj['logger']
-    log.info(f'Start finding transactions with max depth {max_depth}...')
+    log.info(f'Start finding transactions with max depth {max_depth} for exchenges: {", ".join(exchange_list)}')
 
-    exchange_manager = ExchangerManager()
+    exchange_manager = ExchangerManager(exchange_list)
     try:
         prices = await exchange_manager.fetch_prices()
         pprint(prices)

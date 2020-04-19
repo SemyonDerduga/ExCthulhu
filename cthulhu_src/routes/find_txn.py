@@ -12,8 +12,9 @@ HELP_MAX_DEPTH = 'Max depth of transaction exchange and transfer.'
 @click.command()
 @click.pass_context
 @click.option('-d', '--max_depth', type=int, default=4, help=HELP_MAX_DEPTH)
-def find(ctx, max_depth):
+@click.option('-e', '--exchange_list', multiple=True, default=["yobit, binance"])
+def find(ctx, max_depth, exchange_list):
     """
         Find winning transaction and print it.
     """
-    asyncio.run(run_cmd(ctx, max_depth))
+    asyncio.run(run_cmd(ctx, max_depth, exchange_list))
