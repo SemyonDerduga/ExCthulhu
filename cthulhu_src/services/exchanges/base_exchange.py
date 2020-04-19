@@ -44,7 +44,7 @@ class BaseExchange:
 
         results = [
             result
-            for result in await asyncio.gather(*promises, return_exceptions=True)
+            for result in await asyncio.gather(*promises)
             if result is not None
         ]
 
