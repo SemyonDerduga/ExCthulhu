@@ -1,7 +1,7 @@
 import asyncio
-
+import logging
 from cthulhu_src.services.exchanges.base_exchange import BaseExchange
-
+log = logging.getLogger('excthulhu')
 
 class Yobit(BaseExchange):
     name = 'yobit'
@@ -22,7 +22,7 @@ class Yobit(BaseExchange):
                 continue
 
             pair = symbol.split('/')
-            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
+            log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
             results.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price))
 
         return results
@@ -33,6 +33,7 @@ class Yobit(BaseExchange):
             market['symbol']
             for market in markets
         ]
+        log.info(f'Received {len(markets)} сurrency pairs.')
 
         batches = [
             symbols[i:i + self.max_batch_size]
@@ -50,5 +51,7 @@ class Yobit(BaseExchange):
             for result in results
             if result is not None
         ]
+
+        log.info(f'Received {len(results)} сurrency pairs exchange prices.')
 
         return results
