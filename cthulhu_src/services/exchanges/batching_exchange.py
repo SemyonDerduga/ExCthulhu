@@ -1,21 +1,13 @@
 import asyncio
-import logging
-from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
-log = logging.getLogger('excthulhu')
+from cthulhu_src.services.exchanges.base_exchange import BaseExchange
 
 
-class Yobit(BatchingExchange):
-    name = 'yobit'
-    opts = {
-        'enableRateLimit': True,
-        'rateLimit': 620,  # 620
-    }
-
+class BatchingExchange(BaseExchange):
     max_batch_size = 20
 
-    async def state_preparation(self, symbols):
-        markets = await self._instance.fetch_order_books(symbols, limit=1)
+    async def state_preparation(self, symbols: [str]):
+        markets = await self._instance.fetch_order_books(symbols, limit='1')
 
         results = []
         for symbol, info in markets.items():
@@ -25,7 +17,7 @@ class Yobit(BatchingExchange):
                 continue
 
             pair = symbol.split('/')
-            log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
+            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
             results.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price))
 
         return results
@@ -36,7 +28,6 @@ class Yobit(BatchingExchange):
             market['symbol']
             for market in markets
         ]
-        log.info(f'Received {len(markets)} сurrency pairs.')
 
         batches = [
             symbols[i:i + self.max_batch_size]
@@ -54,7 +45,5 @@ class Yobit(BatchingExchange):
             for result in results
             if result is not None
         ]
-
-        log.info(f'Received {len(results)} сurrency pairs exchange prices.')
 
         return results
