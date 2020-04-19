@@ -1,11 +1,13 @@
-#!/usr/bin/env python
+from pprint import pprint
 
-from cthulhu_src.actions.prepare_data import run as prepare_data
+from cthulhu_src.services.exchanger_service import ExchangerManager
+
 """
     Find winning transaction.
 """
 
-def run(ctx, max_depth):
+
+async def run(ctx, max_depth):
     """
 
     :param ctx: click context object
@@ -14,4 +16,11 @@ def run(ctx, max_depth):
     """
     log = ctx.obj["logger"]
     log.info(f"Start finding transactions with max depth {max_depth}...")
-    prepare_data(ctx)
+
+    exchange_manager = ExchangerManager()
+    try:
+        prices = await exchange_manager.fetch_prices()
+    finally:
+        await exchange_manager.close()
+
+    pprint(prices)

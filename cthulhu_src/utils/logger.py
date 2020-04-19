@@ -7,6 +7,7 @@ import coloredlogs
     Logger object.
 """
 
+
 def init(debug=False) -> logging.Logger:
     """
     Init logger object

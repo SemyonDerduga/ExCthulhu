@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import click
 
@@ -8,14 +8,15 @@ import click
 
 from cthulhu_src.utils import logger
 
-
 # import commands
 from cthulhu_src.routes.find_txn import find
+
 
 @click.group()
 @click.pass_context
 def cli(ctx):
     ctx.ensure_object(dict)
+
 
 # include cli commands
 cli.add_command(find)
@@ -33,6 +34,7 @@ def main():
         log = logger.init()
 
     sys.exit(cli(obj={"logger": log}))
+
 
 if __name__ == '__main__':
     main()
