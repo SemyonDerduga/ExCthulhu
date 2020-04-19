@@ -10,10 +10,10 @@ class ExchangerManager:
     )
 
     def __init__(self):
-        self._exchangers: [base_exchanger.BaseExchanger] = (
+        self._exchangers: [base_exchanger.BaseExchanger] = [
             Exchanger()
             for Exchanger in self.exchanger_classes
-        )
+        ]
 
     async def close(self):
         await asyncio.gather(*[

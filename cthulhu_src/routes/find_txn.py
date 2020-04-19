@@ -6,7 +6,7 @@ from cthulhu_src.actions.find_txn import run as run_cmd
     Main command for find winning transaction.
 """
 
-HELP_MAX_DEPTH = "Max depth of transaction exchange and transfer."
+HELP_MAX_DEPTH = 'Max depth of transaction exchange and transfer.'
 
 
 @click.command()

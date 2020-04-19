@@ -27,13 +27,13 @@ def main():
         Before command routing initialize global objects.
         :return: int - exit status
     """
-    if "--debug" in sys.argv:
-        sys.argv.remove("--debug")
+    if '--debug' in sys.argv:
+        sys.argv.remove('--debug')
         log = logger.init(debug=True)
     else:
         log = logger.init()
 
-    sys.exit(cli(obj={"logger": log}))
+    sys.exit(cli(obj={'logger': log}))
 
 
 if __name__ == '__main__':

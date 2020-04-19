@@ -32,7 +32,7 @@ class BaseExchanger:
             if len(result['bids']) == 0 or len(result['bids'][0]) == 0:
                 continue
 
-            pair = symbols[0].split('/')
+            pair = symbols[i].split('/')
             price = result['bids'][0][0]
             prices.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price))
 
