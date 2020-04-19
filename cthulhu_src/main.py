@@ -33,7 +33,7 @@ def main():
     else:
         log = logger.init()
 
-    sys.exit(cli(obj={'logger': log}))
+    sys.exit(cli(obj={}))
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import ccxt.async_support as ccxt
 
@@ -12,6 +13,7 @@ class BaseExchange:
 
     def __init__(self):
         self._instance = getattr(ccxt, self.name)(self.opts)
+        self.log = logging.getLogger('excthulhu')
 
     async def close(self):
         await self._instance.close()
@@ -23,6 +25,7 @@ class BaseExchange:
 
         try:
             price = result['bids'][0][0]
+            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
             return f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price
         except IndexError:
             return None

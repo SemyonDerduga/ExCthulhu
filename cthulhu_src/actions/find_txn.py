@@ -1,3 +1,4 @@
+import logging
 from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
@@ -14,7 +15,7 @@ async def run(ctx, max_depth, exchange_list):
     :param max_depth: int
     :return:
     """
-    log = ctx.obj['logger']
+    log = logging.getLogger('excthulhu')
     log.info(f'Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}')
 
     exchange_manager = ExchangeManager(exchange_list)
