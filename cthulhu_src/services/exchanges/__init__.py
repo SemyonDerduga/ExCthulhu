@@ -11,7 +11,5 @@ from .tidex import Tidex
 from .upbit import Upbit
 from .yobit import Yobit
 
-__all__ = ['BaseExchange', 'BatchingExchange', 'Binance', 'Dsx', 'Exmo',
-           'Hollaex', 'Oceanex', 'Poloniex', 'Tidex', 'Upbit', 'Yobit', 'GenericExchange']
-
-
+__all__ = ['BaseExchange', 'BatchingExchange', 'Binance', 'Dsx', 'Exmo', 'Hollaex',
+           'Oceanex', 'Poloniex', 'Tidex', 'Upbit', 'Yobit', 'GenericExchange']
