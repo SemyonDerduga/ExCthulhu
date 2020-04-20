@@ -2,6 +2,7 @@ import logging
 from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
+from cthulhu_src.actions.cycles import run as find_cycles
 
 """
     Find winning transaction.
@@ -21,8 +22,10 @@ async def run(ctx, max_depth, exchange_list):
     exchange_manager = ExchangeManager(exchange_list)
     try:
         prices = await exchange_manager.fetch_prices()
-        pprint(prices)
+        #pprint(prices)
     finally:
         await exchange_manager.close()
+
+    find_cycles(prices)
 
 

@@ -2,3 +2,4 @@ click
 coloredlogs
 ccxt
 tabulate
+networkx
