@@ -12,13 +12,15 @@ class BatchingExchange(BaseExchange):
         results = []
         for symbol, info in markets.items():
             try:
-                price = info['bids'][0][0]
+                price_bid = info['bids'][0][0]
+                price_ask = info['asks'][0][0]
             except IndexError:
                 continue
 
             pair = symbol.split('/')
-            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
-            results.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price))
+            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price_bid}')
+            results.append((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price_bid))
+            results.append((f'{self.name}_{pair[1]}', f'{self.name}_{pair[0]}', price_ask))
 
         return results
 

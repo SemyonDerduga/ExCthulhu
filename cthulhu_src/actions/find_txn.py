@@ -26,6 +26,6 @@ async def run(ctx, max_depth, exchange_list):
     finally:
         await exchange_manager.close()
 
-    find_cycles(prices)
+    find_cycles(prices, max_depth)
 
 

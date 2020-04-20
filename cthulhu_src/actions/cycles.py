@@ -1,9 +1,13 @@
 import networkx as nx
+import itertools
+from pprint import pprint
+
 
 def rotate(l, n):
     return l[n:] + l[:n]
 
-def run(states, count=4, filter_coefficient=0):
+
+def run(states, max_depth, filter_coefficient=0):
     """
     Find N cycles in the graph,
     then filter them by filter_coefficient and
@@ -16,16 +20,10 @@ def run(states, count=4, filter_coefficient=0):
     :return: (list, float) list and out coefficient
     """
 
-    edges = [(state[0], state[1]) for state in states]
+    edges = [state[0] for state in states]
 
-    G = nx.DiGraph(edges)
 
-    cycles = []
+    #itertools.combinations(states, 2)
 
-    for cycle in nx.simple_cycles(G):
-        for cycle_sample in range(len(cycle)):
-            cycle = rotate(cycle, cycle_sample)
-            cycles.append(cycle + [cycle[0]])
 
-    print(cycles)
-
+    pprint(list(itertools.combinations(set(edges), 2)))

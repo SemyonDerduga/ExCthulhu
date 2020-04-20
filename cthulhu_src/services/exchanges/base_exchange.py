@@ -22,9 +22,11 @@ class BaseExchange:
         pair = symbol.split('/')
 
         try:
-            price = result['bids'][0][0]
-            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price}')
-            return f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price
+            price_bid = result['bids'][0][0]
+            price_ask = result['asks'][0][0]
+            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price_bid}')
+            return ((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price_bid),
+                    (f'{self.name}_{pair[1]}', f'{self.name}_{pair[0]}', price_ask))
         except IndexError:
             return None
 
@@ -44,9 +46,12 @@ class BaseExchange:
 
         results = [
             result
-            for result in await asyncio.gather(*promises)
+            for results in await asyncio.gather(*promises)
+            if results is not None
+            for result in results
             if result is not None
         ]
+
         self.log.info(f'Received {len(results)} сurrency pairs exchange prices.')
 
         return results
