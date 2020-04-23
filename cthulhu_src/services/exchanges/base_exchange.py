@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Tuple
 
 import ccxt.async_support as ccxt
 
@@ -17,7 +18,7 @@ class BaseExchange:
     async def close(self):
         await self._instance.close()
 
-    async def state_preparation(self, symbol):
+    async def state_preparation(self, symbol) -> [Tuple[str, str, float]]:
         result = await self._instance.fetch_order_book(symbol, limit=5)
         pair = symbol.split('/')
 
@@ -28,9 +29,9 @@ class BaseExchange:
             return ((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price_bid),
                     (f'{self.name}_{pair[1]}', f'{self.name}_{pair[0]}', price_ask))
         except IndexError:
-            return None
+            return []
 
-    async def fetch_prices(self):
+    async def fetch_prices(self) -> [Tuple[str, str, float]]:
         markets = await self._instance.fetch_markets()
 
         symbols = [
@@ -47,7 +48,6 @@ class BaseExchange:
         results = [
             result
             for results in await asyncio.gather(*promises)
-            if results is not None
             for result in results
             if result is not None
         ]

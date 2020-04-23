@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+from typing import Tuple
 
 from cthulhu_src.services.exchanges import *
 
@@ -36,7 +37,7 @@ class ExchangeManager:
             for exchanger in self._exchanges
         ])
 
-    async def fetch_prices(self):
+    async def fetch_prices(self) -> [Tuple[str, str, float]]:
         results = await asyncio.gather(*[
             exchanger.fetch_prices()
             for exchanger in self._exchanges
