@@ -4,6 +4,7 @@ from typing import Tuple
 
 import ccxt.async_support as ccxt
 
+
 class BaseExchange:
     currency_blacklist = []
     opts = {
@@ -24,7 +25,7 @@ class BaseExchange:
 
         try:
             price_bid = result['bids'][0][0]
-            price_ask = result['asks'][0][0]
+            price_ask = 1.0 / result['asks'][0][0]
             self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price_bid}')
             return ((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price_bid),
                     (f'{self.name}_{pair[1]}', f'{self.name}_{pair[0]}', price_ask))

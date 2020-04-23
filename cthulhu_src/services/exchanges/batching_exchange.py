@@ -14,7 +14,7 @@ class BatchingExchange(BaseExchange):
         for symbol, info in markets.items():
             try:
                 price_bid = info['bids'][0][0]
-                price_ask = info['asks'][0][0]
+                price_ask = 1.0 / info['asks'][0][0]
             except IndexError:
                 continue
 
