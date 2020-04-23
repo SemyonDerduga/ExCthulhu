@@ -1,8 +1,9 @@
 import asyncio
 import logging
-from typing import Tuple
-
+from typing import Tuple, Dict, List
 import ccxt.async_support as ccxt
+
+from cthulhu_src.services.pair import Pair, Trade
 
 
 class BaseExchange:
@@ -19,20 +20,30 @@ class BaseExchange:
     async def close(self):
         await self._instance.close()
 
-    async def state_preparation(self, symbol) -> [Tuple[str, str, float]]:
-        result = await self._instance.fetch_order_book(symbol, limit=5)
+    async def state_preparation(self, symbol: str, limit: int = 20) -> Tuple[Pair, Pair]:
+        result: Dict[
+            str,
+            Tuple[float, float],
+        ] = await self._instance.fetch_order_book(symbol, limit=str(limit))
+
+        prices_bid = [
+            Trade(price=bid_price, amount=bid_amount)
+            for bid_price, bid_amount in result['bids']
+        ]
+        prices_ask = [
+            Trade(price=1.0 / ask_price, amount=ask_amount)
+            for ask_price, ask_amount in result['asks']
+        ]
         pair = symbol.split('/')
+        self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]}')
+        return (Pair(currency_from=pair[0],
+                     currency_to=pair[1],
+                     trade_book=prices_bid),
+                Pair(currency_from=pair[1],
+                     currency_to=pair[0],
+                     trade_book=prices_ask))
 
-        try:
-            price_bid = result['bids'][0][0]
-            price_ask = 1.0 / result['asks'][0][0]
-            self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]} - {price_bid}')
-            return ((f'{self.name}_{pair[0]}', f'{self.name}_{pair[1]}', price_bid),
-                    (f'{self.name}_{pair[1]}', f'{self.name}_{pair[0]}', price_ask))
-        except IndexError:
-            return []
-
-    async def fetch_prices(self) -> [Tuple[str, str, float]]:
+    async def fetch_prices(self) -> List[Pair]:
         markets = await self._instance.fetch_markets()
 
         symbols = [
@@ -46,13 +57,12 @@ class BaseExchange:
             for symbol in symbols
         ]
 
-        results = [
-            result
-            for results in await asyncio.gather(*promises)
-            for result in results
-            if result is not None
+        pairs: List[Pair] = [
+            pair
+            for pairs in await asyncio.gather(*promises)
+            for pair in pairs
+            if len(pair.trade_book) > 0
         ]
 
-        self.log.info(f'Received {len(results)} сurrency pairs exchange prices.')
-
-        return results
+        self.log.info(f'Received {len(pairs)} сurrency pairs exchange prices.')
+        return pairs

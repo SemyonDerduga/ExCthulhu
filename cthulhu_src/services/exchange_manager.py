@@ -1,8 +1,9 @@
 import asyncio
 import itertools
-from typing import Tuple
+from typing import List
 
 from cthulhu_src.services.exchanges import *
+from cthulhu_src.services.pair import Pair
 
 exchanges_instances = {
     'binance': Binance,
@@ -25,8 +26,8 @@ def get_exchange_by_name(exchange_name):
 
 
 class ExchangeManager:
-    def __init__(self, exchanges: [str]):
-        self._exchanges: [BaseExchange] = [
+    def __init__(self, exchanges: List[str]):
+        self._exchanges: List[BaseExchange] = [
             get_exchange_by_name(name)
             for name in exchanges
         ]
@@ -37,7 +38,7 @@ class ExchangeManager:
             for exchanger in self._exchanges
         ])
 
-    async def fetch_prices(self) -> [Tuple[str, str, float]]:
+    async def fetch_prices(self) -> List[Pair]:
         results = await asyncio.gather(*[
             exchanger.fetch_prices()
             for exchanger in self._exchanges
