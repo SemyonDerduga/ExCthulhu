@@ -18,12 +18,12 @@ def all_paths(start_idx, adj_list, max_len=5):
     q.append(start_idx)
     path.append(start_idx)
     seen.add(start_idx)
-    bfs(start_idx, adj_list, path, seen, start_idx, max_len, res)
+    dfs(start_idx, adj_list, path, seen, start_idx, max_len, res)
     res = [list(deque) for deque in res]
     return res
 
 
-def bfs(start_idx, adj_list: dict, path: collections.deque, seen: set, cur, max_len: int, res: collections.deque):
+def dfs(start_idx, adj_list: dict, path: collections.deque, seen: set, cur, max_len: int, res: collections.deque):
     if len(path) == max_len - 1:
         cur_adj = adj_list[cur]
         if start_idx in cur_adj:
@@ -36,7 +36,7 @@ def bfs(start_idx, adj_list: dict, path: collections.deque, seen: set, cur, max_
         if node not in seen:
             path.append(node)
             seen.add(node)
-            bfs(start_idx, adj_list, path, seen, node, max_len, res)
+            dfs(start_idx, adj_list, path, seen, node, max_len, res)
             seen.remove(node)
             path.pop()
 
