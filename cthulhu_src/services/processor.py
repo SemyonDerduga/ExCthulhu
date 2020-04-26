@@ -2,7 +2,6 @@ import itertools
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import List, Dict
-from pprint import pprint
 
 from cthulhu_src.services.pair import Trade
 
@@ -28,8 +27,9 @@ def find_paths_worker(task: Task):
     def dfs(current_node: int, calculated_price: float):
         if len(path) == task.max_depth - 1:
             if task.finish_node in task.adj_list[current_node]:
+                calculated_price = calc_price(calculated_price, task.adj_list[current_node][task.finish_node])
                 result.append((calculated_price, path.copy() + [task.finish_node]))
-            return calculated_price
+            return
 
         for node, trade_book in task.adj_list[current_node].items():
             if node not in seen:
@@ -41,7 +41,8 @@ def find_paths_worker(task: Task):
                 seen.remove(node)
                 path.pop()
 
-        return calculated_price
+        return
+
     dfs(task.start_node, calc_price(task.amount, task.adj_list[task.finish_node][task.start_node]))
     return result
 
