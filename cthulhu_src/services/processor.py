@@ -12,11 +12,11 @@ class Task:
     start_node: int
     finish_node: int
     max_depth: int
-    amount: float
+    start_amount: float
 
 
-def calc_price(calculated_price, current_trade_book):
-    return calculated_price * current_trade_book[0].price
+def calc_price(amount: float, current_trade_book: List[Trade]):
+    return amount * current_trade_book[0].price
 
 
 def find_paths_worker(task: Task):
@@ -24,11 +24,11 @@ def find_paths_worker(task: Task):
     seen = {task.finish_node, task.start_node}
     result = []
 
-    def dfs(current_node: int, calculated_price: float):
+    def dfs(current_node: int, amount: float):
         if len(path) <= task.max_depth - 1:
             if task.finish_node in task.adj_list[current_node]:
-                final_calculated_price = calc_price(calculated_price, task.adj_list[current_node][task.finish_node])
-                if final_calculated_price > task.amount:
+                final_calculated_price = calc_price(amount, task.adj_list[current_node][task.finish_node])
+                if final_calculated_price > task.start_amount:
                     result.append((final_calculated_price, path.copy() + [task.finish_node]))
             if len(path) == task.max_depth - 1:
                 return
@@ -38,14 +38,14 @@ def find_paths_worker(task: Task):
                 path.append(node)
                 seen.add(node)
 
-                dfs(node, calc_price(calculated_price, trade_book))
+                dfs(node, calc_price(amount, trade_book))
 
                 seen.remove(node)
                 path.pop()
 
         return
 
-    dfs(task.start_node, calc_price(task.amount, task.adj_list[task.finish_node][task.start_node]))
+    dfs(task.start_node, calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node]))
     return result
 
 
@@ -58,7 +58,7 @@ def find_paths(adj_list: List[Dict[int, List[Trade]]],
              start_node=transition,
              finish_node=start,
              max_depth=max_depth,
-             amount=amount)
+             start_amount=amount)
         for transition in adj_list[start].keys()
     ]
     with ProcessPoolExecutor() as executor:
