@@ -1,8 +1,9 @@
 import logging
+from collections import defaultdict
 from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
-from cthulhu_src.actions.cycles import run as find_cycles
+from cthulhu_src.services.processor import find_paths
 
 """
     Find winning transaction.
@@ -21,11 +22,27 @@ async def run(ctx, max_depth, exchange_list):
 
     exchange_manager = ExchangeManager(exchange_list)
     try:
-        prices = await exchange_manager.fetch_prices()
-        #pprint(prices)
+        pairs = await exchange_manager.fetch_prices()
     finally:
         await exchange_manager.close()
 
-    find_cycles(prices, max_depth)
+    adj_dict = defaultdict(list)
+    for pair in pairs:
+        adj_dict[pair.currency_from].append(pair)
 
+    currency_list = list(adj_dict.keys())
 
+    adj_list = [
+        {
+            currency_list.index(pair.currency_to): pair.trade_book
+            for pair in adj_dict[currency_from]
+        }
+        for currency_from in currency_list
+    ]
+
+    result = [
+        [currency_list[node] for node in path]
+        for path in find_paths(adj_list, 0, 4)
+    ]
+
+    pprint(result)
