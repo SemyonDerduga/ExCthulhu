@@ -42,7 +42,7 @@ async def run(ctx, max_depth, exchange_list):
 
     result = [
         [currency_list[node] for node in path]
-        for path in find_paths(adj_list, 0, 4)
+        for path in find_paths(adj_list, 0, max_depth)
     ]
 
     pprint(result)
