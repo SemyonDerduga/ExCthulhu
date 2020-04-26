@@ -11,7 +11,7 @@ class Task:
     adj_list: List[Dict[int, List[Trade]]]
     start_node: int
     finish_node: int
-    max_len: int
+    max_depth: int
     amount: float
 
 
@@ -21,7 +21,7 @@ def find_paths_worker(task: Task):
     result = []
 
     def dfs(current_node: int):
-        if len(path) == task.max_len - 1:
+        if len(path) == task.max_depth - 1:
             if task.finish_node in task.adj_list[current_node]:
                 result.append(path.copy() + [task.finish_node])
             return
@@ -40,15 +40,15 @@ def find_paths_worker(task: Task):
     return result
 
 
-# max_len includes start element
-# example: max_len:5 -> [0, 1, 2, 3, 0]
+# max_depth includes start element
+# example: max_depth:5 -> [0, 1, 2, 3, 0]
 def find_paths(adj_list: List[Dict[int, List[Trade]]],
-               start: int = 0, max_len: int = 5, amount: float = 1):
+               start: int = 0, max_depth: int = 5, amount: float = 1):
     worker_tasks = [
         Task(adj_list=adj_list,
              start_node=transition,
              finish_node=start,
-             max_len=max_len,
+             max_depth=max_depth,
              amount=amount)
         for transition in adj_list[start].keys()
     ]
