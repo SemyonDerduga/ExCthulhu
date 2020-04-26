@@ -32,7 +32,6 @@ async def run(ctx, max_depth, start, amount, exchange_list):
 
     currency_list = list(adj_dict.keys())
 
-
     adj_list = [
         {
             currency_list.index(pair.currency_to): pair.trade_book
@@ -47,3 +46,4 @@ async def run(ctx, max_depth, start, amount, exchange_list):
     ]
 
     pprint(result)
+    pprint(len(result))
