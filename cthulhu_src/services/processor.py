@@ -2,6 +2,7 @@ import itertools
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import List, Dict
+from pprint import pprint
 
 from cthulhu_src.services.pair import Trade
 
@@ -16,7 +17,7 @@ class Task:
 
 
 def calc_price(calculated_price, current_trade_book):
-    return calculated_price
+    return calculated_price * current_trade_book[0].price
 
 
 def find_paths_worker(task: Task):
@@ -41,8 +42,7 @@ def find_paths_worker(task: Task):
                 path.pop()
 
         return calculated_price
-
-    dfs(task.start_node, task.amount)
+    dfs(task.start_node, calc_price(task.amount, task.adj_list[task.finish_node][task.start_node]))
     return result
 
 
