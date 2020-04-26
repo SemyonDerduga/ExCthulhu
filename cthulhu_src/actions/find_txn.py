@@ -10,7 +10,7 @@ from cthulhu_src.services.processor import find_paths
 """
 
 
-async def run(ctx, max_depth, exchange_list):
+async def run(ctx, max_depth, start, amount, exchange_list):
     """
 
     :param ctx: click context object
@@ -32,6 +32,7 @@ async def run(ctx, max_depth, exchange_list):
 
     currency_list = list(adj_dict.keys())
 
+
     adj_list = [
         {
             currency_list.index(pair.currency_to): pair.trade_book
@@ -42,7 +43,7 @@ async def run(ctx, max_depth, exchange_list):
 
     result = [
         [currency_list[node] for node in path]
-        for path in find_paths(adj_list, 0, max_depth)
+        for path in find_paths(adj_list, currency_list.index(start), max_depth)
     ]
 
     pprint(result)
