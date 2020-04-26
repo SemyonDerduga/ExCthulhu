@@ -25,12 +25,13 @@ def find_paths_worker(task: Task):
     result = []
 
     def dfs(current_node: int, calculated_price: float):
-        if len(path) == task.max_depth - 1:
+        if len(path) <= task.max_depth - 1:
             if task.finish_node in task.adj_list[current_node]:
-                calculated_price = calc_price(calculated_price, task.adj_list[current_node][task.finish_node])
-                if calculated_price > task.amount:
-                    result.append((calculated_price, path.copy() + [task.finish_node]))
-            return
+                final_calculated_price = calc_price(calculated_price, task.adj_list[current_node][task.finish_node])
+                if final_calculated_price > task.amount:
+                    result.append((final_calculated_price, path.copy() + [task.finish_node]))
+            if len(path) == task.max_depth - 1:
+                return
 
         for node, trade_book in task.adj_list[current_node].items():
             if node not in seen:
