@@ -36,11 +36,11 @@ class BaseExchange:
         ]
         pair = symbol.split('/')
         self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]}')
-        return (Pair(currency_from=pair[0],
-                     currency_to=pair[1],
+        return (Pair(currency_from=f'{self.name}_{pair[0]}',
+                     currency_to=f'{self.name}_{pair[1]}',
                      trade_book=prices_bid),
-                Pair(currency_from=pair[1],
-                     currency_to=pair[0],
+                Pair(currency_from=f'{self.name}_{pair[1]}',
+                     currency_to=f'{self.name}_{pair[0]}',
                      trade_book=prices_ask))
 
     async def fetch_prices(self) -> List[Pair]:

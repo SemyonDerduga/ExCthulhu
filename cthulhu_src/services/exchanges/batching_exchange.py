@@ -30,11 +30,11 @@ class BatchingExchange(BaseExchange):
 
             currency_pair = symbol.split('/')
             self.log.debug(f'{self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}')
-            results.append(Pair(currency_from=currency_pair[0],
-                                currency_to=currency_pair[1],
+            results.append(Pair(currency_from=f'{self.name}_{currency_pair[0]}',
+                                currency_to=f'{self.name}_{currency_pair[1]}',
                                 trade_book=prices_bid))
-            results.append(Pair(currency_from=currency_pair[1],
-                                currency_to=currency_pair[0],
+            results.append(Pair(currency_from=f'{self.name}_{currency_pair[1]}',
+                                currency_to=f'{self.name}_{currency_pair[0]}',
                                 trade_book=prices_ask))
 
         return results
