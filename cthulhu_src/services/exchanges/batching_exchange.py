@@ -27,6 +27,8 @@ class BatchingExchange(BaseExchange):
                 Trade(price=1.0 / ask_price, amount=ask_amount)
                 for ask_price, ask_amount in info['asks']
             ]
+            if len(prices_bid) == 0 or len(prices_ask) == 0:
+                continue
 
             currency_pair = symbol.split('/')
             self.log.debug(f'{self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}')

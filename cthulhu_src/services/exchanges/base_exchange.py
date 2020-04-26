@@ -20,7 +20,7 @@ class BaseExchange:
     async def close(self):
         await self._instance.close()
 
-    async def state_preparation(self, symbol: str, limit: int = 20) -> Tuple[Pair, Pair]:
+    async def state_preparation(self, symbol: str, limit: int = 20) -> List[Pair]:
         result: Dict[
             str,
             Tuple[float, float],
@@ -34,14 +34,18 @@ class BaseExchange:
             Trade(price=1.0 / ask_price, amount=ask_amount)
             for ask_price, ask_amount in result['asks']
         ]
+
+        if len(prices_bid) == 0 or len(prices_ask) == 0:
+            return []
+
         pair = symbol.split('/')
         self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]}')
-        return (Pair(currency_from=f'{self.name}_{pair[0]}',
+        return [Pair(currency_from=f'{self.name}_{pair[0]}',
                      currency_to=f'{self.name}_{pair[1]}',
                      trade_book=prices_bid),
                 Pair(currency_from=f'{self.name}_{pair[1]}',
                      currency_to=f'{self.name}_{pair[0]}',
-                     trade_book=prices_ask))
+                     trade_book=prices_ask)]
 
     async def fetch_prices(self) -> List[Pair]:
         markets = await self._instance.fetch_markets()
