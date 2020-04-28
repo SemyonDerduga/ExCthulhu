@@ -48,5 +48,6 @@ async def run(ctx, max_depth, start, amount, exchange_list):
         for path in find_paths(adj_list, currency_list.index(start), max_depth, amount)
     ]
 
-    pprint(result)
+    for txn in result:
+        print(f"""{amount} --> {" --> ".join(txn[1])} --> {txn[0]} == {(100.0/(amount/txn[0]))-100}%""")
     pprint(len(result))
