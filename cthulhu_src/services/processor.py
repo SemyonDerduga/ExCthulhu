@@ -1,7 +1,7 @@
 import itertools
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from cthulhu_src.services.pair import Trade
 
@@ -15,8 +15,25 @@ class Task:
     start_amount: float
 
 
-def calc_price(amount: float, current_trade_book: List[Trade]):
-    return amount * current_trade_book[0].price
+def calc_price(initial_amount: float, current_trade_book: List[Trade]) -> Optional[float]:
+    assert initial_amount
+    assert current_trade_book
+    currency_from_amount = 0
+    currency_to_amount = 0
+
+    for order in current_trade_book:
+        if order.amount > (initial_amount - currency_from_amount):
+            currency_to_amount += (initial_amount - currency_from_amount) * order.price
+            currency_from_amount += initial_amount - currency_from_amount
+            break
+        else:
+            currency_from_amount += order.amount
+            currency_to_amount += order.amount * order.price
+
+    if currency_from_amount != initial_amount:
+        return None
+
+    return currency_to_amount
 
 
 def find_paths_worker(task: Task):
@@ -28,7 +45,7 @@ def find_paths_worker(task: Task):
         if len(path) <= task.max_depth - 1:
             if task.finish_node in task.adj_list[current_node]:
                 final_calculated_price = calc_price(amount, task.adj_list[current_node][task.finish_node])
-                if final_calculated_price > task.start_amount:
+                if final_calculated_price is not None and final_calculated_price > task.start_amount:
                     result.append((final_calculated_price, path.copy() + [task.finish_node]))
             if len(path) == task.max_depth - 1:
                 return
@@ -38,7 +55,9 @@ def find_paths_worker(task: Task):
                 path.append(node)
                 seen.add(node)
 
-                dfs(node, calc_price(amount, trade_book))
+                next_price = calc_price(amount, trade_book)
+                if next_price is not None:
+                    dfs(node, calc_price(amount, trade_book))
 
                 seen.remove(node)
                 path.pop()
