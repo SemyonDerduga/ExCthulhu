@@ -30,7 +30,14 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
 
 
 def find_paths_worker(task: Task):
-    path = [task.finish_node, task.start_node]
+    first_transition_amount = calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node])
+    if first_transition_amount is None:
+        return []
+
+    path = [
+        (task.finish_node, task.start_amount),
+        (task.start_node, first_transition_amount),
+    ]
     seen = {task.finish_node, task.start_node}
     result = []
 
@@ -39,28 +46,28 @@ def find_paths_worker(task: Task):
             if task.finish_node in task.adj_list[current_node]:
                 final_calculated_price = calc_price(amount, task.adj_list[current_node][task.finish_node])
                 if final_calculated_price is not None and final_calculated_price > task.start_amount:
-                    result.append((final_calculated_price, path.copy() + [task.finish_node]))
+                    result.append(path.copy() + [(task.finish_node, final_calculated_price)])
+
             if len(path) == task.max_depth - 1:
                 return
 
         for node, trade_book in task.adj_list[current_node].items():
             if node not in seen:
-                path.append(node)
+                next_price = calc_price(amount, trade_book)
+                if next_price is None:
+                    continue
+
+                path.append((node, next_price))
                 seen.add(node)
 
-                next_price = calc_price(amount, trade_book)
-                if next_price is not None:
-                    dfs(node, next_price)
+                dfs(node, next_price)
 
                 seen.remove(node)
                 path.pop()
 
         return
 
-    first_transition_amount = calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node])
-    if first_transition_amount is not None:
-        dfs(task.start_node, first_transition_amount)
-
+    dfs(task.start_node, first_transition_amount)
     return result
 
 

@@ -40,14 +40,17 @@ async def run(ctx, max_depth, start, amount, exchange_list):
         for currency_from in currency_list
     ]
 
+    # replace currency id with name
     result = [
-        (
-            path[0],
-            [currency_list[node] for node in path[1]],
-        )
+        [(currency_list[node[0]], node[1]) for node in path]
         for path in find_paths(adj_list, currency_list.index(start), max_depth, amount)
     ]
 
-    for txn in result:
-        print(f"""{amount} --> {" --> ".join(txn[1])} --> {txn[0]} == {(100.0/(amount/txn[0]))-100}%""")
+    for path in result:
+        print(*[
+            f'{node[0]} ({node[1]})'
+            for node in path
+        ], sep=' -> ', end='')
+        print(f' = {(path[-1][1] / amount - 1) * 100}%')
+
     pprint(len(result))
