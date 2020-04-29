@@ -64,7 +64,10 @@ def find_paths_worker(task: Task):
 
         return
 
-    dfs(task.start_node, calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node]))
+    first_transition_amount = calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node])
+    if first_transition_amount is not None:
+        dfs(task.start_node, first_transition_amount)
+
     return result
 
 
