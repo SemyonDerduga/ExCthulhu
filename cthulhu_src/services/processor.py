@@ -50,7 +50,7 @@ def find_paths_worker(task: Task):
 
                 next_price = calc_price(amount, trade_book)
                 if next_price is not None:
-                    dfs(node, calc_price(amount, trade_book))
+                    dfs(node, next_price)
 
                 seen.remove(node)
                 path.pop()
