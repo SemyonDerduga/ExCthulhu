@@ -3,19 +3,19 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 
-from cthulhu_src.services.pair import Trade
+from cthulhu_src.services.pair import Order
 
 
 @dataclass
 class Task:
-    adj_list: List[Dict[int, List[Trade]]]
+    adj_list: List[Dict[int, List[Order]]]
     start_node: int
     finish_node: int
     max_depth: int
     start_amount: float
 
 
-def calc_price(initial_amount: float, current_trade_book: List[Trade]) -> Optional[float]:
+def calc_price(initial_amount: float, current_trade_book: List[Order]) -> Optional[float]:
     assert initial_amount
     assert current_trade_book
     currency_from_amount = 0
@@ -70,7 +70,7 @@ def find_paths_worker(task: Task):
 
 # max_depth includes start element
 # example: max_depth:5 -> [0, 1, 2, 3, 0]
-def find_paths(adj_list: List[Dict[int, List[Trade]]],
+def find_paths(adj_list: List[Dict[int, List[Order]]],
                start: int = 0, max_depth: int = 5, amount: float = 1):
     worker_tasks = [
         Task(adj_list=adj_list,

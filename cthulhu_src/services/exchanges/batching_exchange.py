@@ -2,7 +2,7 @@ import asyncio
 from typing import Tuple, Dict, List
 
 from cthulhu_src.services.exchanges.base_exchange import BaseExchange
-from cthulhu_src.services.pair import Pair, Trade
+from cthulhu_src.services.pair import Pair, Order
 
 
 class BatchingExchange(BaseExchange):
@@ -20,11 +20,11 @@ class BatchingExchange(BaseExchange):
         results = []
         for symbol, info in markets.items():
             prices_bid = [
-                Trade(price=bid_price, amount=bid_amount)
+                Order(price=bid_price, amount=bid_amount)
                 for bid_price, bid_amount in info['bids']
             ]
             prices_ask = [
-                Trade(price=1.0 / ask_price, amount=ask_amount)
+                Order(price=1.0 / ask_price, amount=ask_amount)
                 for ask_price, ask_amount in info['asks']
             ]
             if len(prices_bid) == 0 or len(prices_ask) == 0:

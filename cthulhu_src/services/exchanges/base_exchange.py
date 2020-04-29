@@ -3,7 +3,7 @@ import logging
 from typing import Tuple, Dict, List
 import ccxt.async_support as ccxt
 
-from cthulhu_src.services.pair import Pair, Trade
+from cthulhu_src.services.pair import Pair, Order
 
 
 class BaseExchange:
@@ -27,11 +27,11 @@ class BaseExchange:
         ] = await self._instance.fetch_order_book(symbol, limit=str(limit))
 
         prices_bid = [
-            Trade(price=bid_price, amount=bid_amount)
+            Order(price=bid_price, amount=bid_amount)
             for bid_price, bid_amount in result['bids']
         ]
         prices_ask = [
-            Trade(price=1.0 / ask_price, amount=ask_amount)
+            Order(price=1.0 / ask_price, amount=ask_amount)
             for ask_price, ask_amount in result['asks']
         ]
 
