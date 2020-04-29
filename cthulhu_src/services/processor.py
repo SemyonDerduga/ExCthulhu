@@ -15,25 +15,18 @@ class Task:
     start_amount: float
 
 
-def calc_price(initial_amount: float, current_trade_book: List[Order]) -> Optional[float]:
-    assert initial_amount
-    assert current_trade_book
-    currency_from_amount = 0
-    currency_to_amount = 0
+def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Optional[float]:
+    target_currency_amount = 0
 
     for order in current_trade_book:
-        if order.amount > (initial_amount - currency_from_amount):
-            currency_to_amount += (initial_amount - currency_from_amount) * order.price
-            currency_from_amount += initial_amount - currency_from_amount
-            break
-        else:
-            currency_from_amount += order.amount
-            currency_to_amount += order.amount * order.price
+        if order.amount >= trading_amount:
+            target_currency_amount += trading_amount * order.price
+            return target_currency_amount
 
-    if currency_from_amount != initial_amount:
-        return None
+        trading_amount -= order.amount
+        target_currency_amount += order.amount * order.price
 
-    return currency_to_amount
+    return None
 
 
 def find_paths_worker(task: Task):
