@@ -1,5 +1,8 @@
+cryptography
 click
 coloredlogs
 ccxt
 tabulate
+aiohttp
+aiohttp_proxy
 pyyaml
