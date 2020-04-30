@@ -14,17 +14,27 @@ class BaseExchange:
     name = ''
     log = logging.getLogger('excthulhu')
 
-    def __init__(self):
+    def __init__(self, proxies=()):
         self._instance = getattr(ccxt, self.name)(self.opts)
+        self._proxies = proxies
+        self._proxy_index = 0
 
     async def close(self):
         await self._instance.close()
+
+    def _with_proxy(self):
+        api = self._instance
+        if len(self._proxies) > 0:
+            api.proxy = self._proxies[self._proxy_index]
+            self._proxy_index = (self._proxy_index + 1) % len(self._proxies)
+
+        return api
 
     async def state_preparation(self, symbol: str, limit: int = 20) -> List[Pair]:
         result: Dict[
             str,
             Tuple[float, float],
-        ] = await self._instance.fetch_order_book(symbol, limit=str(limit))
+        ] = await self._with_proxy().fetch_order_book(symbol, limit=str(limit))
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)
@@ -48,7 +58,7 @@ class BaseExchange:
                      trade_book=prices_ask)]
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._instance.fetch_markets()
+        markets = await self._with_proxy().fetch_markets()
 
         symbols = [
             market['symbol']

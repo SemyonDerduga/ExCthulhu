@@ -15,7 +15,7 @@ class BatchingExchange(BaseExchange):
                 str,
                 List[Tuple[float, float]],
             ],
-        ] = await self._instance.fetch_order_books(symbols, limit=str(limit))
+        ] = await self._with_proxy().fetch_order_books(symbols, limit=str(limit))
 
         results = []
         for symbol, info in markets.items():
@@ -42,7 +42,7 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._instance.fetch_markets()
+        markets = await self._with_proxy().fetch_markets()
         symbols: [str] = [
             market['symbol']
             for market in markets

@@ -18,17 +18,17 @@ exchanges_instances = {
 }
 
 
-def get_exchange_by_name(exchange_name):
+def get_exchange_by_name(exchange_name, proxies):
     if exchange_name in exchanges_instances:
-        return exchanges_instances[exchange_name]()
+        return exchanges_instances[exchange_name](proxies)
     else:
-        return GenericExchange(exchange_name)
+        return GenericExchange(exchange_name, proxies)
 
 
 class ExchangeManager:
-    def __init__(self, exchanges: List[str]):
+    def __init__(self, exchanges: List[str], proxies=()):
         self._exchanges: List[BaseExchange] = [
-            get_exchange_by_name(name)
+            get_exchange_by_name(name, proxies)
             for name in exchanges
         ]
 
