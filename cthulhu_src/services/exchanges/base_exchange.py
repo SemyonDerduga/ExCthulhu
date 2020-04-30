@@ -64,7 +64,14 @@ class BaseExchange:
             market['symbol']
             for market in markets
         ]
-        self.log.info(f'Received {len(markets)} сurrency pairs.')
+
+        currency = set([
+            cur
+            for cur_pair in symbols
+            for cur in cur_pair.split('/')
+        ])
+
+        self.log.info(f'Received {len(currency)} сurrency.')
 
         promises = [
             self.state_preparation(symbol)

@@ -10,6 +10,15 @@ from cthulhu_src.services.processor import find_paths
 """
 
 
+def get_order_path_history(path, adj_list):
+    orders_list = []
+
+    for i in range(len(path) - 1):
+        orders_list.append(adj_list[i][i + 1])
+
+    return orders_list
+
+
 async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
     """
 
@@ -52,5 +61,10 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
             for node in path
         ], sep=' -> ', end='')
         print(f' = {(path[-1][1] / amount - 1) * 100}%')
+
+        if ctx.obj["debug"]:
+            orders = get_order_path_history(path, adj_list)
+            pprint(orders)
+            print('=' * 80)
 
     pprint(len(result))
