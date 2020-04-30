@@ -10,7 +10,7 @@ from cthulhu_src.services.processor import find_paths
 """
 
 
-async def run(ctx, max_depth, start, amount, exchange_list):
+async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
     """
 
     :param ctx: click context object
@@ -20,7 +20,7 @@ async def run(ctx, max_depth, start, amount, exchange_list):
     log = logging.getLogger('excthulhu')
     log.info(f'Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}')
 
-    exchange_manager = ExchangeManager(exchange_list)
+    exchange_manager = ExchangeManager(exchange_list, proxy)
     try:
         pairs = await exchange_manager.fetch_prices()
     finally:

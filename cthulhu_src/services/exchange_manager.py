@@ -26,7 +26,16 @@ def get_exchange_by_name(exchange_name, proxies):
 
 
 class ExchangeManager:
+    """
+        ExchangeManager - asynchronous data collection from exchanges
+    """
     def __init__(self, exchanges: List[str], proxies=()):
+        """
+        Get list of exchange objects
+
+        :param exchanges: list of exchanges
+        :param proxies:
+        """
         self._exchanges: List[BaseExchange] = [
             get_exchange_by_name(name, proxies)
             for name in exchanges

@@ -1,0 +1,8 @@
+---
+max_depth: 4
+start: binance_BTC
+amount: 0.002
+exchange_list:
+- binance
+- hollaex
+

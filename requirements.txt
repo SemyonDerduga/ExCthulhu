@@ -2,4 +2,4 @@ click
 coloredlogs
 ccxt
 tabulate
-networkx
+pyyaml
