@@ -1,7 +1,9 @@
 import asyncio
 import logging
 from typing import Tuple, Dict, List
+from aiohttp import ClientSession
 import ccxt.async_support as ccxt
+from aiohttp_proxy import ProxyConnector
 
 from cthulhu_src.services.pair import Pair, Order
 
@@ -16,17 +18,24 @@ class BaseExchange:
 
     def __init__(self, proxies=()):
         self._instance = getattr(ccxt, self.name)(self.opts)
-        self._proxies = proxies
-        self._proxy_index = 0
+        self._sessions = []
+        if len(proxies) > 0:
+            for proxy in proxies:
+                connector = ProxyConnector.from_url(proxy)
+                self._sessions.append(ClientSession(connector=connector))
+
+        self._session_index = 0
 
     async def close(self):
+        for session in self._sessions:
+            await session.close()
         await self._instance.close()
 
     def _with_proxy(self):
         api = self._instance
-        if len(self._proxies) > 0:
-            api.proxy = self._proxies[self._proxy_index]
-            self._proxy_index = (self._proxy_index + 1) % len(self._proxies)
+        if len(self._sessions) > 0:
+            api.session = self._sessions[self._session_index]
+            self._session_index = (self._session_index + 1) % len(self._sessions)
 
         return api
 
