@@ -48,6 +48,14 @@ class BatchingExchange(BaseExchange):
             for market in markets
         ]
 
+        currency = set([
+            cur
+            for cur_pair in symbols
+            for cur in cur_pair.split('/')
+        ])
+
+        self.log.info(f'Received {len(currency)} сurrency.')
+
         batches: List[List[str]] = [
             symbols[i:i + self.max_batch_size]
             for i in range(0, len(symbols), self.max_batch_size)

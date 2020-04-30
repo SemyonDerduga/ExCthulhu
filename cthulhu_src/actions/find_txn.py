@@ -14,7 +14,7 @@ def get_order_path_history(path, adj_list):
     orders_list = []
 
     for i in range(len(path) - 1):
-        orders_list.append(adj_list[i][i + 1])
+        orders_list.append(adj_list[path[i][0]][path[i + 1][0]])
 
     return orders_list
 
@@ -49,10 +49,12 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
         for currency_from in currency_list
     ]
 
+    paths = find_paths(adj_list, currency_list.index(start), max_depth, amount)
+
     # replace currency id with name
     result = [
         [(currency_list[node[0]], node[1]) for node in path]
-        for path in find_paths(adj_list, currency_list.index(start), max_depth, amount)
+        for path in paths
     ]
 
     for path in result:
@@ -62,7 +64,8 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
         ], sep=' -> ', end='')
         print(f' = {(path[-1][1] / amount - 1) * 100}%')
 
-        if ctx.obj["debug"]:
+    if ctx.obj["debug"]:
+        for path in paths:
             orders = get_order_path_history(path, adj_list)
             pprint(orders)
             print('=' * 80)

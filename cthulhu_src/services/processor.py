@@ -1,3 +1,4 @@
+import os
 import itertools
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -83,6 +84,6 @@ def find_paths(adj_list: List[Dict[int, List[Order]]],
              start_amount=amount)
         for transition in adj_list[start].keys()
     ]
-    with ProcessPoolExecutor() as executor:
+    with ProcessPoolExecutor(max_workers=os.cpu_count() * 2) as executor:
         result = executor.map(find_paths_worker, worker_tasks)
     return list(itertools.chain(*result))
