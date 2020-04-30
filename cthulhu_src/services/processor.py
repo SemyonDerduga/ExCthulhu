@@ -1,15 +1,14 @@
 import os
 import itertools
-from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import List, Dict, Optional
+from multiprocessing import Process, Queue
 
 from cthulhu_src.services.pair import Order
 
 
 @dataclass
 class Task:
-    adj_list: List[Dict[int, List[Order]]]
     start_node: int
     finish_node: int
     max_depth: int
@@ -30,8 +29,8 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
     return None
 
 
-def find_paths_worker(task: Task):
-    first_transition_amount = calc_price(task.start_amount, task.adj_list[task.finish_node][task.start_node])
+def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
+    first_transition_amount = calc_price(task.start_amount, adj_list[task.finish_node][task.start_node])
     if first_transition_amount is None:
         return []
 
@@ -44,15 +43,15 @@ def find_paths_worker(task: Task):
 
     def dfs(current_node: int, amount: float):
         if len(path) <= task.max_depth - 1:
-            if task.finish_node in task.adj_list[current_node]:
-                final_calculated_price = calc_price(amount, task.adj_list[current_node][task.finish_node])
+            if task.finish_node in adj_list[current_node]:
+                final_calculated_price = calc_price(amount, adj_list[current_node][task.finish_node])
                 if final_calculated_price is not None and final_calculated_price > task.start_amount:
                     result.append(path.copy() + [(task.finish_node, final_calculated_price)])
 
             if len(path) == task.max_depth - 1:
                 return
 
-        for node, trade_book in task.adj_list[current_node].items():
+        for node, trade_book in adj_list[current_node].items():
             if node not in seen:
                 next_price = calc_price(amount, trade_book)
                 if next_price is None:
@@ -77,13 +76,40 @@ def find_paths_worker(task: Task):
 def find_paths(adj_list: List[Dict[int, List[Order]]],
                start: int = 0, max_depth: int = 5, amount: float = 1):
     worker_tasks = [
-        Task(adj_list=adj_list,
-             start_node=transition,
+        Task(start_node=transition,
              finish_node=start,
              max_depth=max_depth,
              start_amount=amount)
         for transition in adj_list[start].keys()
     ]
-    with ProcessPoolExecutor(max_workers=os.cpu_count() * 2) as executor:
-        result = executor.map(find_paths_worker, worker_tasks)
-    return list(itertools.chain(*result))
+
+    task_queue = Queue()
+    for task in worker_tasks:
+        task_queue.put(task)
+
+    result_queue = Queue()
+    processes = [
+        Process(target=worker, args=(adj_list, task_queue, result_queue))
+        for _ in range(os.cpu_count())
+    ]
+
+    for process in processes:
+        process.start()
+
+    results = []
+    for i in range(len(worker_tasks)):
+        results.append(result_queue.get())
+
+    for process in processes:
+        process.terminate()
+
+    return list(itertools.chain(*results))
+
+
+def worker(adj_list: List[Dict[int, List[Order]]], task_queue: Queue, result_queue: Queue):
+    while True:
+        task = task_queue.get()
+        if task is None:
+            break
+        result = find_paths_worker(adj_list, task)
+        result_queue.put_nowait(result)
