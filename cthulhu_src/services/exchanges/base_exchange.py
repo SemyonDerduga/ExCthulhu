@@ -17,14 +17,22 @@ class BaseExchange:
     log = logging.getLogger('excthulhu')
 
     def __init__(self, proxies=()):
-        self._instance = getattr(ccxt, self.name)(self.opts)
+        exchange_class = getattr(ccxt, self.name)
+
         self._sessions = []
         if len(proxies) > 0:
             for proxy in proxies:
                 connector = ProxyConnector.from_url(proxy)
                 self._sessions.append(ClientSession(connector=connector))
 
+            if 'rateLimit' in self.opts:
+                self.opts['rateLimit'] = int(self.opts['rateLimit'] / len(self._sessions))
+            else:
+                self.opts['rateLimit'] = exchange_class().describe()['rateLimit']
+
         self._session_index = 0
+
+        self._instance = exchange_class(self.opts)
 
     async def close(self):
         for session in self._sessions:
