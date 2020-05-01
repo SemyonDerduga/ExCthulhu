@@ -57,6 +57,9 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
         for path in paths
     ]
 
+    # Sort result by profit
+    result.sort(key=lambda x: x[-1][1])
+
     for path in result:
         print(*[
             f'{node[0]} ({node[1]})'
@@ -70,4 +73,4 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
             pprint(orders)
             print('=' * 80)
 
-    pprint(len(result))
+    log.info(f"Total count of winning cycles:{len(result)}")
