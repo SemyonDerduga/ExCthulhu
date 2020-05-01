@@ -51,14 +51,14 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
 
     paths = find_paths(adj_list, currency_list.index(start), max_depth, amount)
 
+    # Sort result by profit
+    paths.sort(key=lambda x: x[-1][1])
+
     # replace currency id with name
     result = [
         [(currency_list[node[0]], node[1]) for node in path]
         for path in paths
     ]
-
-    # Sort result by profit
-    result.sort(key=lambda x: x[-1][1])
 
     for path in result:
         print(*[
