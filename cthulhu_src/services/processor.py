@@ -40,7 +40,7 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
         (task.current_node, task.current_amount),
         (task.second_node, first_transition_amount),
     ]
-    seen = {task.finish_node, task.second_node}
+    seen = {task.current_node, task.second_node}
     result = []
 
     def dfs(current_node: int, amount: float):
