@@ -10,9 +10,11 @@ from cthulhu_src.services.pair import Order
 @dataclass
 class Task:
     start_node: int
+    current_node: int
     finish_node: int
     max_depth: int
     start_amount: float
+    current_amount: float
 
 
 def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Optional[float]:
@@ -30,12 +32,12 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
 
 
 def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
-    first_transition_amount = calc_price(task.start_amount, adj_list[task.finish_node][task.start_node])
+    first_transition_amount = calc_price(task.current_amount, adj_list[task.current_node][task.start_node])
     if first_transition_amount is None:
         return []
 
     path = [
-        (task.finish_node, task.start_amount),
+        (task.current_node, task.current_amount),
         (task.start_node, first_transition_amount),
     ]
     seen = {task.finish_node, task.start_node}
@@ -74,14 +76,27 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
 # max_depth includes start element
 # example: max_depth:5 -> [0, 1, 2, 3, 0]
 def find_paths(adj_list: List[Dict[int, List[Order]]],
-               start: int = 0, max_depth: int = 5, amount: float = 1):
-    worker_tasks = [
-        Task(start_node=transition,
-             finish_node=start,
-             max_depth=max_depth,
-             start_amount=amount)
-        for transition in adj_list[start].keys()
-    ]
+               start: int = 0, max_depth: int = 5, amount: float = 1, current_node=None, current_amount=None):
+    if current_node and current_amount:
+        worker_tasks = [
+            Task(start_node=transition,
+                 current_node=current_node,
+                 finish_node=start,
+                 max_depth=max_depth,
+                 start_amount=amount,
+                 current_amount=current_amount)
+            for transition in adj_list[current_node].keys()
+        ]
+    else:
+        worker_tasks = [
+            Task(start_node=transition,
+                 current_node=start,
+                 finish_node=start,
+                 max_depth=max_depth,
+                 start_amount=amount,
+                 current_amount=amount)
+            for transition in adj_list[start].keys()
+        ]
 
     task_queue = Queue()
     for task in worker_tasks:
