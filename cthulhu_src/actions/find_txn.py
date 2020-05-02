@@ -29,11 +29,17 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
     log = logging.getLogger('excthulhu')
     log.info(f'Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}')
 
+    log.info(f"Start loading data...")
+
     exchange_manager = ExchangeManager(exchange_list, proxy)
     try:
         pairs = await exchange_manager.fetch_prices()
     finally:
         await exchange_manager.close()
+
+    log.info(f"Finish loading")
+
+    log.info(f"Start prepare data...")
 
     adj_dict = defaultdict(list)
     for pair in pairs:
@@ -49,7 +55,11 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
         for currency_from in currency_list
     ]
 
+    log.info(f"Finish prepare data")
+
+    log.info(f"Start data processing...")
     paths = find_paths(adj_list, currency_list.index(start), max_depth, amount)
+    log.info(f"Finish data processing")
 
     # Sort result by profit
     paths.sort(key=lambda x: x[-1][1])
