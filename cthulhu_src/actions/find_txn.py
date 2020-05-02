@@ -20,7 +20,7 @@ def get_order_path_history(path, adj_list):
 
 
 async def run(ctx, max_depth, exchange_list,
-              start_node, start_amount,
+              start_node, start_amount, cache_dir,
               current_node=None, current_amount=None,
               cached=False, proxy=()):
     """
@@ -30,6 +30,7 @@ async def run(ctx, max_depth, exchange_list,
     :param exchange_list:
     :param start_node:
     :param start_amount:
+    :param cache_dir:
     :param current_node:
     :param current_amount:
     :param cached:
@@ -40,7 +41,7 @@ async def run(ctx, max_depth, exchange_list,
 
     log.info(f'Start loading data...')
 
-    exchange_manager = ExchangeManager(exchange_list, proxy, cached=cached)
+    exchange_manager = ExchangeManager(exchange_list, proxy, cached=cached, cache_dir=cache_dir)
     try:
         pairs = await exchange_manager.fetch_prices()
     finally:

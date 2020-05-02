@@ -50,11 +50,18 @@ def run(ctx, config_path):
     if 'cached' in data:
         is_cached = data['cached']
 
+    # Parse cache dir
+    cache_dir = None
+    if 'cache_dir' in data:
+        cache_dir = data['cached']
 
-    asyncio.run(find_txn(ctx,
-                         data['max_depth'],
-                         data['start'],
-                         data['amount'],
-                         data['exchange_list'],
-                         is_cached,
-                         proxy))
+    asyncio.run(find_txn(ctx=ctx,
+                         max_depth=data['max_depth'],
+                         exchange_list=data['exchange_list'],
+                         start_node=data['start'],
+                         start_amount=data['amount'],
+                         cache_dir=cache_dir,
+                         current_node=None,
+                         current_amount=None,
+                         cached=is_cached,
+                         proxy=proxy))
