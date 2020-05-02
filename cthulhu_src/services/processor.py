@@ -121,9 +121,10 @@ def find_paths(adj_list: AdjacencyList,
     for process in processes:
         process.start()
 
-    results = []
-    for _ in tqdm(range(len(worker_tasks))):
-        results.append(result_queue.get())
+    results = [
+        result_queue.get()
+        for _ in tqdm(range(len(worker_tasks)), unit='task', dynamic_ncols=True)
+    ]
 
     for process in processes:
         process.terminate()
