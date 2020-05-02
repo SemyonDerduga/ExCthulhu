@@ -6,3 +6,4 @@ tabulate
 aiohttp
 aiohttp_proxy
 pyyaml
+tqdm

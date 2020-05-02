@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from multiprocessing import Process, Queue
 
+from tqdm import tqdm
+
 from cthulhu_src.services.pair import AdjacencyList, NodeID, TradeBook
 
 
@@ -120,7 +122,7 @@ def find_paths(adj_list: AdjacencyList,
         process.start()
 
     results = []
-    for i in range(len(worker_tasks)):
+    for _ in tqdm(range(len(worker_tasks))):
         results.append(result_queue.get())
 
     for process in processes:
