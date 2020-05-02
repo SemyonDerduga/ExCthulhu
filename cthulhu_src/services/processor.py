@@ -135,4 +135,4 @@ def worker(adj_list: AdjacencyList, task_queue: Queue, result_queue: Queue):
         if task is None:
             break
         result = find_paths_worker(adj_list, task)
-        result_queue.put_nowait(result)
+        result_queue.put(result)
