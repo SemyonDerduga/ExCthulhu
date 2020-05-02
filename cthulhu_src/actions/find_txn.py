@@ -19,7 +19,7 @@ def get_order_path_history(path, adj_list):
     return orders_list
 
 
-async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
+async def run(ctx, max_depth, start, amount, exchange_list, cached=False, proxy=()):
     """
 
     :param ctx: click context object
@@ -31,7 +31,7 @@ async def run(ctx, max_depth, start, amount, exchange_list, proxy=()):
 
     log.info(f"Start loading data...")
 
-    exchange_manager = ExchangeManager(exchange_list, proxy)
+    exchange_manager = ExchangeManager(exchange_list, proxy, cached=cached)
     try:
         pairs = await exchange_manager.fetch_prices()
     finally:

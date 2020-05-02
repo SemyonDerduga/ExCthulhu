@@ -1,9 +1,12 @@
 import asyncio
 import itertools
-from typing import List
+import json
+import os
+from pathlib import Path
+from typing import List, Dict
 
 from cthulhu_src.services.exchanges import *
-from cthulhu_src.services.pair import Pair
+from cthulhu_src.services.pair import Pair, Order
 
 exchanges_instances = {
     'binance': Binance,
@@ -29,29 +32,82 @@ class ExchangeManager:
     """
         ExchangeManager - asynchronous data collection from exchanges
     """
-    def __init__(self, exchanges: List[str], proxies=()):
+
+    def __init__(self, exchanges: List[str], proxies=(), cached=False, cache_dir='~/.cache/cthulhu'):
         """
-        Get list of exchange objects
+        Creates cache directory
+        Creates list of cached exchanges
+        Inits list of not cached exchange instances.
 
         :param exchanges: list of exchanges
         :param proxies:
         """
-        self._exchanges: List[BaseExchange] = [
-            get_exchange_by_name(name, proxies)
+        self._cached = cached
+        self._exchange_names = exchanges
+        self._cached_exchanges = []
+
+        if self._cached:
+            cache_dir_path = Path(os.path.expanduser(cache_dir))
+            cache_dir_path.mkdir(parents=True, exist_ok=True)
+            self._cache_dir = cache_dir_path.absolute()
+            self._cached_exchanges = [
+                name[:name.rindex('.json')]
+                for name in os.listdir(self._cache_dir)
+                if os.path.isfile(f'{self._cache_dir}/{name}') and name.endswith('.json')
+            ]
+
+        self._exchanges: Dict[str, BaseExchange] = {
+            name: get_exchange_by_name(name, proxies)
             for name in exchanges
-        ]
+            if name not in self._cached_exchanges
+        }
 
     async def close(self):
         await asyncio.gather(*[
-            exchanger.close()
-            for exchanger in self._exchanges
+            exchange.close()
+            for exchange in self._exchanges.values()
         ])
 
     async def fetch_prices(self) -> List[Pair]:
         results = await asyncio.gather(*[
-            exchanger.fetch_prices()
-            for exchanger in self._exchanges
+            self.fetch_exchange_prices(exchange_name)
+            for exchange_name in self._exchange_names
         ])
 
         prices = list(itertools.chain(*results))
         return prices
+
+    async def fetch_exchange_prices(self, exchange_name: str) -> List[Pair]:
+        if exchange_name not in self._cached_exchanges:
+            exchange = self._exchanges[exchange_name]
+            prices = await exchange.fetch_prices()
+            if not self._cached:
+                return prices
+
+            with open(f'{self._cache_dir}/{exchange_name}.json', 'w+') as file:
+                json.dump([
+                    {
+                        'currency_from': pair.currency_from,
+                        'currency_to': pair.currency_to,
+                        'trade_book': [(order.price, order.amount) for order in pair.trade_book],
+                    }
+                    for pair in prices
+                ], file)
+                return prices
+
+        with open(f'{self._cache_dir}/{exchange_name}.json') as file:
+            data = json.load(file)
+            return [
+                Pair(
+                    currency_from=pair['currency_from'],
+                    currency_to=pair['currency_to'],
+                    trade_book=[
+                        Order(
+                            price=order[0],
+                            amount=order[1],
+                        )
+                        for order in pair['trade_book']
+                    ]
+                )
+                for pair in data
+            ]
