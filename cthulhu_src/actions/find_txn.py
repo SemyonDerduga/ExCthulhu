@@ -19,7 +19,7 @@ def get_order_path_history(path, adj_list):
     return orders_list
 
 
-async def run(ctx, max_depth, start, amount, exchange_list, cached=False, proxy=()):
+async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, current_amount=None, cached=False, proxy=()):
     """
 
     :param ctx: click context object
@@ -55,10 +55,16 @@ async def run(ctx, max_depth, start, amount, exchange_list, cached=False, proxy=
         for currency_from in currency_list
     ]
 
+    # Get index of current node
+    current_node_id = None
+    if current_node:
+        current_node_id = currency_list.index(current_node)
+        print(current_node_id)
+
     log.info(f"Finish prepare data")
 
     log.info(f"Start data processing...")
-    paths = find_paths(adj_list, currency_list.index(start), max_depth, amount)
+    paths = find_paths(adj_list, currency_list.index(start), max_depth, amount, current_node_id, current_amount)
     log.info(f"Finish data processing")
 
     # Sort result by profit
