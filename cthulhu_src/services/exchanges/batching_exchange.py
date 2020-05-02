@@ -24,7 +24,7 @@ class BatchingExchange(BaseExchange):
                 for bid_price, bid_amount in info['bids']
             ]
             prices_ask = [
-                Order(price=1.0 / ask_price, amount=ask_amount)
+                Order(price=1.0 / ask_price, amount=ask_amount * ask_price)
                 for ask_price, ask_amount in info['asks']
             ]
             if len(prices_bid) == 0 or len(prices_ask) == 0:

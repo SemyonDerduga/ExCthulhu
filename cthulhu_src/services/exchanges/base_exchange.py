@@ -59,7 +59,7 @@ class BaseExchange:
             for bid_price, bid_amount in result['bids']
         ]
         prices_ask = [
-            Order(price=1.0 / ask_price, amount=ask_amount)
+            Order(price=1.0 / ask_price, amount=ask_amount * ask_price)
             for ask_price, ask_amount in result['asks']
         ]
 
