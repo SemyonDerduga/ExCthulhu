@@ -14,6 +14,7 @@ class BaseExchange:
         'enableRateLimit': True,
     }
     name = ''
+    fee = 0
     log = logging.getLogger('excthulhu')
 
     def __init__(self, proxies=()):
@@ -104,3 +105,7 @@ class BaseExchange:
 
         self.log.info(f'Received {len(pairs)} сurrency pairs exchange prices.')
         return pairs
+
+    @classmethod
+    def calc_fee(cls, amount: float) -> float:
+        return amount * (1.0 + cls.fee)
