@@ -1,17 +1,17 @@
 import os
 import itertools
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Tuple
+from typing import List, Optional, Tuple
 from multiprocessing import Process, Queue
 
-from cthulhu_src.services.pair import Order
+from cthulhu_src.services.pair import AdjacencyList, NodeID, TradeBook
 
 
 @dataclass
 class Task:
-    current_node: int  # node where algorithm start
-    second_node: int  # node where starts dfs
-    finish_node: int  # node where algorithm going to
+    current_node: NodeID  # node where algorithm start
+    second_node: NodeID  # node where starts dfs
+    finish_node: NodeID  # node where algorithm going to
 
     start_amount: float  # to compare start and finish amount
     current_amount: float  # amount at the moment when algorithm starts
@@ -19,7 +19,10 @@ class Task:
     max_depth: int  # max depth to search
 
 
-def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Optional[float]:
+Step = Tuple[NodeID, float]
+
+
+def calc_price(trading_amount: float, current_trade_book: TradeBook) -> Optional[float]:
     target_currency_amount = 0
 
     for order in current_trade_book:
@@ -33,7 +36,7 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
     return None
 
 
-def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task) -> List[Tuple[int, float]]:
+def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Step]:
     second_amount = calc_price(task.current_amount, adj_list[task.current_node][task.second_node])
     if second_amount is None:
         return []
@@ -45,7 +48,7 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task) -> Lis
     seen = {task.current_node, task.second_node}
     result = []
 
-    def dfs(current_node: int, amount: float):
+    def dfs(current_node: NodeID, amount: float):
         if len(path) <= task.max_depth - 1:
             if task.finish_node in adj_list[current_node]:
                 final_calculated_price = calc_price(amount, adj_list[current_node][task.finish_node])
@@ -77,10 +80,10 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task) -> Lis
 
 # max_depth includes start element
 # example: max_depth=5 -> [0, 1, 2, 3, 0]
-def find_paths(adj_list: List[Dict[int, List[Order]]],
-               start_node: int, start_amount: float,
-               current_node: Optional[int] = None, current_amount: Optional[int] = None,
-               max_depth: int = 5) -> List[Tuple[int, float]]:
+def find_paths(adj_list: AdjacencyList,
+               start_node: NodeID, start_amount: float,
+               current_node: Optional[NodeID] = None, current_amount: Optional[int] = None,
+               max_depth: int = 5) -> List[Step]:
     if current_node is not None and current_amount is not None:
         worker_tasks = [
             Task(current_node=current_node,
@@ -125,7 +128,7 @@ def find_paths(adj_list: List[Dict[int, List[Order]]],
     return list(itertools.chain(*results))
 
 
-def worker(adj_list: List[Dict[int, List[Order]]], task_queue: Queue, result_queue: Queue):
+def worker(adj_list: AdjacencyList, task_queue: Queue, result_queue: Queue):
     while True:
         task = task_queue.get()
         if task is None:
