@@ -59,7 +59,6 @@ async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, c
     current_node_id = None
     if current_node:
         current_node_id = currency_list.index(current_node)
-        print(current_node_id)
 
     log.info(f"Finish prepare data")
 

@@ -9,7 +9,7 @@ from cthulhu_src.services.pair import Order
 
 @dataclass
 class Task:
-    start_node: int
+    second_node: int
     current_node: int
     finish_node: int
     max_depth: int
@@ -32,15 +32,15 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
 
 
 def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
-    first_transition_amount = calc_price(task.current_amount, adj_list[task.current_node][task.start_node])
+    first_transition_amount = calc_price(task.current_amount, adj_list[task.current_node][task.second_node])
     if first_transition_amount is None:
         return []
 
     path = [
         (task.current_node, task.current_amount),
-        (task.start_node, first_transition_amount),
+        (task.second_node, first_transition_amount),
     ]
-    seen = {task.finish_node, task.start_node}
+    seen = {task.finish_node, task.second_node}
     result = []
 
     def dfs(current_node: int, amount: float):
@@ -69,7 +69,7 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
 
         return
 
-    dfs(task.start_node, first_transition_amount)
+    dfs(task.second_node, first_transition_amount)
     return result
 
 
@@ -79,7 +79,7 @@ def find_paths(adj_list: List[Dict[int, List[Order]]],
                start: int = 0, max_depth: int = 5, amount: float = 1, current_node=None, current_amount=None):
     if current_node and current_amount:
         worker_tasks = [
-            Task(start_node=transition,
+            Task(second_node=transition,
                  current_node=current_node,
                  finish_node=start,
                  max_depth=max_depth,
@@ -89,7 +89,7 @@ def find_paths(adj_list: List[Dict[int, List[Order]]],
         ]
     else:
         worker_tasks = [
-            Task(start_node=transition,
+            Task(second_node=transition,
                  current_node=start,
                  finish_node=start,
                  max_depth=max_depth,
