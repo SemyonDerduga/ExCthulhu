@@ -19,17 +19,26 @@ def get_order_path_history(path, adj_list):
     return orders_list
 
 
-async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, current_amount=None, cached=False, proxy=()):
+async def run(ctx, max_depth, exchange_list,
+              start_node, start_amount,
+              current_node=None, current_amount=None,
+              cached=False, proxy=()):
     """
 
-    :param ctx: click context object
-    :param max_depth: int
-    :return:
+    :param ctx:
+    :param max_depth:
+    :param exchange_list:
+    :param start_node:
+    :param start_amount:
+    :param current_node:
+    :param current_amount:
+    :param cached:
+    :param proxy:
     """
     log = logging.getLogger('excthulhu')
     log.info(f'Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}')
 
-    log.info(f"Start loading data...")
+    log.info(f'Start loading data...')
 
     exchange_manager = ExchangeManager(exchange_list, proxy, cached=cached)
     try:
@@ -37,9 +46,9 @@ async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, c
     finally:
         await exchange_manager.close()
 
-    log.info(f"Finish loading")
+    log.info(f'Finish loading')
 
-    log.info(f"Start prepare data...")
+    log.info(f'Start prepare data...')
 
     adj_dict = defaultdict(list)
     for pair in pairs:
@@ -59,13 +68,18 @@ async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, c
     current_node_id = None
     if current_node:
         current_node_id = currency_list.index(current_node)
-        print(current_node_id)
 
-    log.info(f"Finish prepare data")
+    log.info(f'Finish prepare data')
 
-    log.info(f"Start data processing...")
-    paths = find_paths(adj_list, currency_list.index(start), max_depth, amount, current_node_id, current_amount)
-    log.info(f"Finish data processing")
+    log.info(f'Start data processing...')
+    paths = find_paths(adj_list=adj_list,
+                       start_node=currency_list.index(start_node),
+                       start_amount=start_amount,
+                       current_node=current_node_id,
+                       current_amount=current_amount,
+                       max_depth=max_depth)
+    log.info(f'Finish data processing')
+    log.info(f'Finish data processing')
 
     # Sort result by profit
     paths.sort(key=lambda x: x[-1][1])
@@ -81,12 +95,12 @@ async def run(ctx, max_depth, start, amount, exchange_list, current_node=None, c
             f'{node[0]} ({node[1]})'
             for node in path
         ], sep=' -> ', end='')
-        print(f' = {(path[-1][1] / amount - 1) * 100}%')
+        print(f' = {(path[-1][1] / start_amount - 1) * 100}%')
 
-    if ctx.obj["debug"]:
+    if ctx.obj['debug']:
         for path in paths:
             orders = get_order_path_history(path, adj_list)
             pprint(orders)
             print('=' * 80)
 
-    log.info(f"Total count of winning cycles:{len(result)}")
+    log.info(f'Total count of winning cycles:{len(result)}')

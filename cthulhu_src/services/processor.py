@@ -1,7 +1,7 @@
 import os
 import itertools
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from multiprocessing import Process, Queue
 
 from cthulhu_src.services.pair import Order
@@ -9,10 +9,14 @@ from cthulhu_src.services.pair import Order
 
 @dataclass
 class Task:
-    start_node: int
-    finish_node: int
-    max_depth: int
-    start_amount: float
+    current_node: int  # node where algorithm start
+    second_node: int  # node where starts dfs
+    finish_node: int  # node where algorithm going to
+
+    start_amount: float  # to compare start and finish amount
+    current_amount: float  # amount at the moment when algorithm starts
+
+    max_depth: int  # max depth to search
 
 
 def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Optional[float]:
@@ -29,16 +33,16 @@ def calc_price(trading_amount: float, current_trade_book: List[Order]) -> Option
     return None
 
 
-def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
-    first_transition_amount = calc_price(task.start_amount, adj_list[task.finish_node][task.start_node])
-    if first_transition_amount is None:
+def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task) -> List[Tuple[int, float]]:
+    second_amount = calc_price(task.current_amount, adj_list[task.current_node][task.second_node])
+    if second_amount is None:
         return []
 
     path = [
-        (task.finish_node, task.start_amount),
-        (task.start_node, first_transition_amount),
+        (task.current_node, task.current_amount),
+        (task.second_node, second_amount),
     ]
-    seen = {task.finish_node, task.start_node}
+    seen = {task.current_node, task.second_node}
     result = []
 
     def dfs(current_node: int, amount: float):
@@ -67,21 +71,36 @@ def find_paths_worker(adj_list: List[Dict[int, List[Order]]], task: Task):
 
         return
 
-    dfs(task.start_node, first_transition_amount)
+    dfs(task.second_node, second_amount)
     return result
 
 
 # max_depth includes start element
-# example: max_depth:5 -> [0, 1, 2, 3, 0]
+# example: max_depth=5 -> [0, 1, 2, 3, 0]
 def find_paths(adj_list: List[Dict[int, List[Order]]],
-               start: int = 0, max_depth: int = 5, amount: float = 1):
-    worker_tasks = [
-        Task(start_node=transition,
-             finish_node=start,
-             max_depth=max_depth,
-             start_amount=amount)
-        for transition in adj_list[start].keys()
-    ]
+               start_node: int, start_amount: float,
+               current_node: Optional[int] = None, current_amount: Optional[int] = None,
+               max_depth: int = 5) -> List[Tuple[int, float]]:
+    if current_node is not None and current_amount is not None:
+        worker_tasks = [
+            Task(current_node=current_node,
+                 second_node=second_node,
+                 finish_node=start_node,
+                 start_amount=start_amount,
+                 current_amount=current_amount,
+                 max_depth=max_depth)
+            for second_node in adj_list[current_node].keys()
+        ]
+    else:
+        worker_tasks = [
+            Task(current_node=start_node,
+                 second_node=second_node,
+                 finish_node=start_node,
+                 start_amount=start_amount,
+                 current_amount=start_amount,
+                 max_depth=max_depth)
+            for second_node in adj_list[start_node].keys()
+        ]
 
     task_queue = Queue()
     for task in worker_tasks:
