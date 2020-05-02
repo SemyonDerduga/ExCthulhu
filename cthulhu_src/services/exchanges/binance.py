@@ -6,3 +6,4 @@ class Binance(BaseExchange):
     opts = {
         'enableRateLimit': False,
     }
+    limit = 5000

@@ -14,6 +14,7 @@ class BaseExchange:
         'enableRateLimit': True,
     }
     name = ''
+    limit = 2000
     fee = 0
     log = logging.getLogger('excthulhu')
 
@@ -48,11 +49,11 @@ class BaseExchange:
 
         return api
 
-    async def state_preparation(self, symbol: str, limit: int = 20) -> List[Pair]:
+    async def state_preparation(self, symbol: str) -> List[Pair]:
         result: Dict[
             str,
             Tuple[float, float],
-        ] = await self._with_proxy().fetch_order_book(symbol, limit=str(limit))
+        ] = await self._with_proxy().fetch_order_book(symbol, limit=str(self.limit))
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)

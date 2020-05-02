@@ -8,14 +8,14 @@ from cthulhu_src.services.pair import Pair, Order
 class BatchingExchange(BaseExchange):
     max_batch_size = 20
 
-    async def state_preparation(self, symbols: List[str], limit: int = 20) -> List[Pair]:
+    async def state_preparation(self, symbols: List[str]) -> List[Pair]:
         markets: Dict[
             str,
             Dict[
                 str,
                 List[Tuple[float, float]],
             ],
-        ] = await self._with_proxy().fetch_order_books(symbols, limit=str(limit))
+        ] = await self._with_proxy().fetch_order_books(symbols, limit=str(self.limit))
 
         results = []
         for symbol, info in markets.items():
