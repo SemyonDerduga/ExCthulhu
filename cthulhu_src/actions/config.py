@@ -45,9 +45,16 @@ def run(ctx, config_path):
     if 'proxy' in data:
         proxy += data['proxy']
 
+    # Parse cached flag
+    is_cached = False
+    if 'cached' in data:
+        is_cached = data['cached']
+
+
     asyncio.run(find_txn(ctx,
                          data['max_depth'],
                          data['start'],
                          data['amount'],
                          data['exchange_list'],
+                         is_cached,
                          proxy))
