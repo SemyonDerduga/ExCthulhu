@@ -27,4 +27,4 @@ def find(ctx, max_depth, start, amount, cached, exchange_list, current_node, cur
     """
         Find winning transaction and print it.
     """
-    asyncio.run(run_cmd(ctx, max_depth, start, amount, exchange_list, current_node, current_amount, cached))
+    asyncio.run(run_cmd(ctx, max_depth, exchange_list, start, amount, current_node, current_amount, cached))
