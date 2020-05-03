@@ -33,7 +33,7 @@ class ExchangeManager:
         ExchangeManager - asynchronous data collection from exchanges
     """
 
-    def __init__(self, exchanges: List[str], proxies=(), cached=False, cache_dir='~/.cache/cthulhu'):
+    def __init__(self, exchanges: List[str], proxy_manager=None, cached=False, cache_dir='~/.cache/cthulhu'):
         """
         Creates cache directory
         Creates list of cached exchanges
@@ -57,7 +57,7 @@ class ExchangeManager:
             ]
 
         self._exchanges: Dict[str, BaseExchange] = {
-            name: get_exchange_by_name(name, proxies)
+            name: get_exchange_by_name(name, proxy_manager)
             for name in exchanges
             if name not in self._cached_exchanges
         }

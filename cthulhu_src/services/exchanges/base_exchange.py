@@ -1,11 +1,12 @@
 import asyncio
 import logging
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 from aiohttp import ClientSession
 import ccxt.async_support as ccxt
 from aiohttp_proxy import ProxyConnector
 
 from cthulhu_src.services.pair import Pair, Order
+from cthulhu_src.services.proxy_manager import ProxyManager
 
 
 class BaseExchange:
@@ -18,42 +19,62 @@ class BaseExchange:
     fee = 0
     log = logging.getLogger('excthulhu')
 
-    def __init__(self, proxies=()):
+    def __init__(self, proxy_manager: Optional[ProxyManager] = None):
         exchange_class = getattr(ccxt, self.name)
+        self._proxy_manager = proxy_manager
 
         self._sessions = []
-        if len(proxies) > 0:
-            for proxy in proxies:
+        if proxy_manager is not None:
+            for proxy in proxy_manager.get_active_proxies():
                 connector = ProxyConnector.from_url(proxy)
-                self._sessions.append(ClientSession(connector=connector))
+                proxy_url = connector.proxy_url
+                self._sessions.append((proxy_url, ClientSession(connector=connector)))
 
             if 'rateLimit' in self.opts:
                 self.opts['rateLimit'] = int(self.opts['rateLimit'] / len(self._sessions))
             else:
                 self.opts['rateLimit'] = exchange_class().describe()['rateLimit']
 
-        self._session_index = 0
+        self._session_index = -1
 
         self._instance = exchange_class(self.opts)
 
     async def close(self):
         for session in self._sessions:
-            await session.close()
+            await session[1].close()
         await self._instance.close()
 
-    def _with_proxy(self):
+    def _get_api(self):
         api = self._instance
+
         if len(self._sessions) > 0:
-            api.session = self._sessions[self._session_index]
+            session_index = self._session_index
+            api.session = self._sessions[session_index][1]
             self._session_index = (self._session_index + 1) % len(self._sessions)
+            return api, session_index
 
-        return api
+        return api, None
 
+    async def _change_session(self, session_id):
+        session = self._sessions[session_id]
+        await session[1].close()
+        new_proxy_url = self._proxy_manager.change_proxy(session[0])
+        return ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
     async def state_preparation(self, symbol: str) -> List[Pair]:
-        result: Dict[
-            str,
-            Tuple[float, float],
-        ] = await self._with_proxy().fetch_order_book(symbol, limit=str(self.limit))
+        api, session_id = self._get_api()
+        while True:
+            try:
+                result: Dict[
+                    str,
+                    Tuple[float, float],
+                ] = await api.fetch_order_book(symbol, limit=str(self.limit))
+                break
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
+                if self._proxy_manager is None:
+                    raise
+
+                api.session = await self._change_session(session_id)
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)
@@ -77,7 +98,17 @@ class BaseExchange:
                      trade_book=prices_ask)]
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._with_proxy().fetch_markets()
+        api, session_id = self._get_api()
+        while True:
+            try:
+                markets = await api.fetch_markets()
+                break
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
+                if self._proxy_manager is None:
+                    raise
+
+                api.session = await self._change_session(session_id)
 
         symbols = [
             market['symbol']

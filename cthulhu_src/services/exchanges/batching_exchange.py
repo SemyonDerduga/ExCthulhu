@@ -1,5 +1,6 @@
 import asyncio
 from typing import Tuple, Dict, List
+import ccxt
 
 from cthulhu_src.services.exchanges.base_exchange import BaseExchange
 from cthulhu_src.services.pair import Pair, Order
@@ -9,13 +10,23 @@ class BatchingExchange(BaseExchange):
     max_batch_size = 20
 
     async def state_preparation(self, symbols: List[str]) -> List[Pair]:
-        markets: Dict[
-            str,
-            Dict[
-                str,
-                List[Tuple[float, float]],
-            ],
-        ] = await self._with_proxy().fetch_order_books(symbols, limit=str(self.limit))
+        api, session_id = self._get_api()
+        while True:
+            try:
+                markets: Dict[
+                    str,
+                    Dict[
+                        str,
+                        List[Tuple[float, float]],
+                    ],
+                ] = await api.fetch_order_books(symbols, limit=str(self.limit))
+                break
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
+                if self._proxy_manager is None:
+                    raise
+
+                api.session = await self._change_session(session_id)
 
         results = []
         for symbol, info in markets.items():
@@ -42,7 +53,18 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._with_proxy().fetch_markets()
+        api, session_id = self._get_api()
+        while True:
+            try:
+                markets = await api.fetch_markets()
+                break
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
+                if self._proxy_manager is None:
+                    raise
+
+                api.session = await self._change_session(session_id)
+
         symbols: [str] = [
             market['symbol']
             for market in markets

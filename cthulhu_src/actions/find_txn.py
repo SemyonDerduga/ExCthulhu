@@ -4,6 +4,7 @@ from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
 from cthulhu_src.services.processor import find_paths
+from cthulhu_src.services.proxy_manager import ProxyManager
 
 """
     Find winning transaction.
@@ -41,7 +42,12 @@ async def run(ctx, max_depth, exchange_list,
 
     log.info(f'Start loading data...')
 
-    exchange_manager = ExchangeManager(exchange_list, proxy, cached=cached, cache_dir=cache_dir)
+    if proxy:
+        proxy_manager = ProxyManager(proxy)
+    else:
+        proxy_manager = None
+
+    exchange_manager = ExchangeManager(exchange_list, proxy_manager, cached=cached, cache_dir=cache_dir)
     try:
         pairs = await exchange_manager.fetch_prices()
     finally:
