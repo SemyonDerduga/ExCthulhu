@@ -53,7 +53,7 @@ def run(ctx, config_path):
     # Parse cache dir
     cache_dir = None
     if 'cache_dir' in data:
-        cache_dir = data['cached']
+        cache_dir = data['cache_dir']
 
     asyncio.run(find_txn(ctx=ctx,
                          max_depth=data['max_depth'],
