@@ -42,10 +42,7 @@ async def run(ctx, max_depth, exchange_list,
 
     log.info(f'Start loading data...')
 
-    if proxy:
-        proxy_manager = ProxyManager(proxy)
-    else:
-        proxy_manager = None
+    proxy_manager = ProxyManager(proxy)
 
     exchange_manager = ExchangeManager(exchange_list, proxy_manager, cached=cached, cache_dir=cache_dir)
     try:
@@ -85,7 +82,6 @@ async def run(ctx, max_depth, exchange_list,
                        current_node=current_node_id,
                        current_amount=current_amount,
                        max_depth=max_depth)
-    log.info(f'Finish data processing')
     log.info(f'Finish data processing')
 
     # Sort result by profit
