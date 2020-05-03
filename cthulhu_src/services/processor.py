@@ -1,12 +1,16 @@
+import logging
 import os
 import itertools
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from multiprocessing import Process, Queue
+from time import time
 
 from tqdm import tqdm
 
 from cthulhu_src.services.pair import AdjacencyList, NodeID, TradeBook
+
+logger = logging.getLogger('excthulhu')
 
 
 @dataclass
@@ -118,6 +122,7 @@ def find_paths(adj_list: AdjacencyList,
         for _ in range(os.cpu_count())
     ]
 
+    begin = time()
     for process in processes:
         process.start()
 
@@ -125,6 +130,9 @@ def find_paths(adj_list: AdjacencyList,
         result_queue.get()
         for _ in tqdm(range(len(worker_tasks)), unit='task', dynamic_ncols=True)
     ]
+    end = time()
+    delta_ms = (end - begin) * 1000
+    logger.info(f'{delta_ms} ms elapsed')
 
     for process in processes:
         process.terminate()
