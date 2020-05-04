@@ -7,3 +7,4 @@ aiohttp
 aiohttp_proxy
 pyyaml
 tqdm
+proxybroker

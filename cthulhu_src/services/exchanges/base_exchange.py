@@ -48,18 +48,19 @@ class BaseExchange:
         api = self._instance
 
         if len(self._sessions) > 0:
-            session_index = self._session_index
+            session_index = (self._session_index + 1) % len(self._sessions)
             api.session = self._sessions[session_index][1]
-            self._session_index = (self._session_index + 1) % len(self._sessions)
+            self._session_index = session_index
             return api, session_index
 
         return api, None
 
     async def _change_session(self, session_id):
-        session = self._sessions[session_id]
-        await session[1].close()
-        new_proxy_url = self._proxy_manager.change_proxy(session[0])
+        proxy_url, session = self._sessions[session_id]
+        await session.close()
+        new_proxy_url = await self._proxy_manager.change_proxy(str(proxy_url))
         return ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
+
     async def state_preparation(self, symbol: str) -> List[Pair]:
         api, session_id = self._get_api()
         while True:

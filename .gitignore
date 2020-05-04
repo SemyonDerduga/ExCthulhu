@@ -5,3 +5,4 @@ venv
 config.yml
 config.json
 cache
+*.sqlite

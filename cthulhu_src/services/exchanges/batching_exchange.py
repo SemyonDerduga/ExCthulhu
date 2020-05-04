@@ -59,7 +59,8 @@ class BatchingExchange(BaseExchange):
                 markets = await api.fetch_markets()
                 break
             except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+                self.log.debug(e)
                 if self._proxy_manager is None:
                     raise
 

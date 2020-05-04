@@ -23,9 +23,11 @@ def get_order_path_history(path, adj_list):
 async def run(ctx, max_depth, exchange_list,
               start_node, start_amount, cache_dir,
               current_node=None, current_amount=None,
-              cached=False, proxy=()):
+              cached=False, proxy=False, proxy_db='proxy.sqlite',
+              active_proxies=25, proxy_pool=50):
     """
 
+    :param proxy_db:
     :param ctx:
     :param max_depth:
     :param exchange_list:
@@ -42,7 +44,9 @@ async def run(ctx, max_depth, exchange_list,
 
     log.info(f'Start loading data...')
 
-    proxy_manager = ProxyManager(proxy)
+    proxy_manager = ProxyManager(proxy_db, active_proxies, proxy_pool) if proxy else None
+    if proxy_manager is not None:
+        await proxy_manager.ensure_pool()
 
     exchange_manager = ExchangeManager(exchange_list, proxy_manager, cached=cached, cache_dir=cache_dir)
     try:
@@ -55,6 +59,7 @@ async def run(ctx, max_depth, exchange_list,
     log.info(f'Start prepare data...')
 
     adj_dict = defaultdict(list)
+
     for pair in pairs:
         adj_dict[pair.currency_from].append(pair)
 
