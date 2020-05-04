@@ -40,7 +40,6 @@ class ProxyManager:
         ]
 
     async def change_proxy(self, addr: str) -> str:
-        logger.info(f'changing invalid proxy: {addr}...')
         self._db_cursor.execute("""
             select id, url from proxies
             where url = ?
@@ -53,8 +52,9 @@ class ProxyManager:
             """, (dead_proxy[0],))
             self._db_conn.commit()
 
-            new_proxy = await self.fetch_proxies(1)
-            return new_proxy[0]
+            new_proxy = (await self.fetch_proxies(1))[0]
+            logger.info(f'changing invalid proxy: {addr}->{new_proxy}')
+            return new_proxy
 
         # get last active proxy, because it is the freshest
         self._db_cursor.execute("""
@@ -62,7 +62,9 @@ class ProxyManager:
             order by id
             limit 1 offset ?
         """, (self._active_proxy_count - 1,))
-        return self._db_cursor.fetchone()[0]
+        new_proxy = self._db_cursor.fetchone()[0]
+        logger.info(f'changing invalid proxy: {addr}->{new_proxy}')
+        return new_proxy
 
     async def fetch_proxies(self, count=1) -> List[str]:
         proxy_queue = asyncio.Queue(maxsize=2)
