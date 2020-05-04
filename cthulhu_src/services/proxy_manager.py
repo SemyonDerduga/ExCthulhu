@@ -79,9 +79,11 @@ class ProxyManager:
                     self._db_cursor.execute('insert into proxies(url) values (?)', (proxy_url,))
                     self._db_conn.commit()
                     proxies.append(proxy_url)
+                    break
 
-                    broker_task.cancel()
-                    await broker_task
-                    return proxies
                 except sqlite3.IntegrityError as e:
                     logger.info(e)
+
+        broker_task.cancel()
+        await broker_task
+        return proxies

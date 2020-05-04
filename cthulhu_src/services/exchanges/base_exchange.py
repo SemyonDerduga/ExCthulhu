@@ -22,6 +22,7 @@ class BaseExchange:
     def __init__(self, proxy_manager: Optional[ProxyManager] = None):
         exchange_class = getattr(ccxt, self.name)
         self._proxy_manager = proxy_manager
+        self._session_lock = asyncio.Lock()
 
         self._sessions = []
         if proxy_manager is not None:
@@ -44,16 +45,17 @@ class BaseExchange:
             await session[1].close()
         await self._instance.close()
 
-    def _get_api(self):
-        api = self._instance
+    async def _get_api(self):
+        async with self._session_lock:
+            api = self._instance
 
-        if len(self._sessions) > 0:
-            session_index = (self._session_index + 1) % len(self._sessions)
-            api.session = self._sessions[session_index][1]
-            self._session_index = session_index
-            return api, session_index
+            if len(self._sessions) > 0:
+                session_index = (self._session_index + 1) % len(self._sessions)
+                api.session = self._sessions[session_index][1]
+                self._session_index = session_index
+                return api, session_index
 
-        return api, None
+            return api, None
 
     async def _change_session(self, session_id):
         proxy_url, session = self._sessions[session_id]
@@ -62,7 +64,7 @@ class BaseExchange:
         return ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
 
     async def state_preparation(self, symbol: str) -> List[Pair]:
-        api, session_id = self._get_api()
+        api, session_id = await self._get_api()
         while True:
             try:
                 result: Dict[
@@ -99,7 +101,7 @@ class BaseExchange:
                      trade_book=prices_ask)]
 
     async def fetch_prices(self) -> List[Pair]:
-        api, session_id = self._get_api()
+        api, session_id = await self._get_api()
         while True:
             try:
                 markets = await api.fetch_markets()

@@ -10,7 +10,7 @@ class BatchingExchange(BaseExchange):
     max_batch_size = 20
 
     async def state_preparation(self, symbols: List[str]) -> List[Pair]:
-        api, session_id = self._get_api()
+        api, session_id = await self._get_api()
         while True:
             try:
                 markets: Dict[
@@ -53,7 +53,7 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
-        api, session_id = self._get_api()
+        api, session_id = await self._get_api()
         while True:
             try:
                 markets = await api.fetch_markets()
