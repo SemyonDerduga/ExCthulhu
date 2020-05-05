@@ -4,7 +4,7 @@ from cthulhu_src.services.exchanges.base_exchange import BaseExchange
 class Binance(BaseExchange):
     name = 'binance'
     opts = {
-        'enableRateLimit': True,
+        'enableRateLimit': False,
         'rateLimit': 500,
     }
-    limit = 5000
+    limit = 1000

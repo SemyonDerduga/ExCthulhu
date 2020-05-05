@@ -1,6 +1,5 @@
 import asyncio
 from typing import Tuple, Dict, List
-import ccxt
 
 from cthulhu_src.services.exchanges.base_exchange import BaseExchange
 from cthulhu_src.services.pair import Pair, Order
@@ -10,9 +9,8 @@ class BatchingExchange(BaseExchange):
     max_batch_size = 20
 
     async def state_preparation(self, symbols: List[str]) -> List[Pair]:
-        api, session_id = await self._get_api()
         while True:
-            try:
+            async with self.get_api() as api:
                 markets: Dict[
                     str,
                     Dict[
@@ -21,12 +19,6 @@ class BatchingExchange(BaseExchange):
                     ],
                 ] = await api.fetch_order_books(symbols, limit=str(self.limit))
                 break
-            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
-                if self._proxy_manager is None:
-                    raise
-
-                api.session = await self._change_session(session_id)
 
         results = []
         for symbol, info in markets.items():
@@ -53,18 +45,10 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
-        api, session_id = await self._get_api()
         while True:
-            try:
+            async with self.get_api() as api:
                 markets = await api.fetch_markets()
                 break
-            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
-                self.log.debug(e)
-                if self._proxy_manager is None:
-                    raise
-
-                api.session = await self._change_session(session_id)
 
         symbols: [str] = [
             market['symbol']

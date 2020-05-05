@@ -18,12 +18,13 @@ class ProxyManager:
         self._db_cursor.execute("""
             create table if not exists proxies (
                 id integer primary key autoincrement,
-                url text unique
+                url text unique,
+                dead int not null default 0
             )
         """)
 
     async def ensure_pool(self):
-        self._db_cursor.execute('select count(id) from proxies')
+        self._db_cursor.execute('select count(id) from proxies where dead = 0')
         table_size = self._db_cursor.fetchone()[0]
         if table_size < self._pool_size:
             await self.fetch_proxies(self._pool_size - table_size)
@@ -31,6 +32,7 @@ class ProxyManager:
     def get_active_proxies(self) -> List[str]:
         self._db_cursor.execute("""
             select url from proxies
+            where dead = 0
             order by id
             limit ?
         """, (self._active_proxy_count,))
@@ -42,28 +44,28 @@ class ProxyManager:
     async def change_proxy(self, addr: str) -> str:
         self._db_cursor.execute("""
             select id, url from proxies
-            where url = ?
+            where url = ? and dead = 0
         """, (addr,))
         dead_proxy = self._db_cursor.fetchone()
         if dead_proxy is not None:
             self._db_cursor.execute("""
-                delete from proxies
+                update proxies
+                set dead = 1
                 where id = ?
             """, (dead_proxy[0],))
             self._db_conn.commit()
 
-            new_proxy = (await self.fetch_proxies(1))[0]
-            logger.info(f'changing invalid proxy: {addr}->{new_proxy}')
-            return new_proxy
+            await self.ensure_pool()
 
         # get last active proxy, because it is the freshest
         self._db_cursor.execute("""
             select url from proxies
+            where dead = 0
             order by id
             limit 1 offset ?
         """, (self._active_proxy_count - 1,))
         new_proxy = self._db_cursor.fetchone()[0]
-        logger.info(f'changing invalid proxy: {addr}->{new_proxy}')
+        logger.info(f'changing invalid proxy: {addr} -> {new_proxy}')
         return new_proxy
 
     async def fetch_proxies(self, count=1) -> List[str]:

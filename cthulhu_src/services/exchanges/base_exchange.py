@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import traceback
+from contextlib import contextmanager, asynccontextmanager
 from typing import Tuple, Dict, List, Optional
 from aiohttp import ClientSession
 import ccxt.async_support as ccxt
@@ -29,12 +31,12 @@ class BaseExchange:
             for proxy in proxy_manager.get_active_proxies():
                 connector = ProxyConnector.from_url(proxy)
                 proxy_url = connector.proxy_url
-                self._sessions.append((proxy_url, ClientSession(connector=connector)))
+                self._sessions.append((proxy_url, ClientSession(connector=connector), asyncio.Lock()))
 
             if 'rateLimit' in self.opts:
                 self.opts['rateLimit'] = int(self.opts['rateLimit'] / len(self._sessions))
             else:
-                self.opts['rateLimit'] = exchange_class().describe()['rateLimit']
+                self.opts['rateLimit'] = int(exchange_class().describe()['rateLimit'] / len(self._sessions))
 
         self._session_index = -1
 
@@ -45,39 +47,41 @@ class BaseExchange:
             await session[1].close()
         await self._instance.close()
 
-    async def _get_api(self):
-        async with self._session_lock:
-            api = self._instance
+    @asynccontextmanager
+    async def get_api(self):
+        api = self._instance
 
-            if len(self._sessions) > 0:
-                session_index = (self._session_index + 1) % len(self._sessions)
-                api.session = self._sessions[session_index][1]
-                self._session_index = session_index
-                return api, session_index
+        if self._proxy_manager is not None:
+            session_index = self._session_index
+            proxy_url, session, lock = self._sessions[session_index]
 
-            return api, None
+            await lock.acquire()
+            api.session = session
+            self._session_index = (self._session_index + 1) % len(self._sessions)
 
-    async def _change_session(self, session_id):
-        proxy_url, session = self._sessions[session_id]
-        await session.close()
-        new_proxy_url = await self._proxy_manager.change_proxy(str(proxy_url))
-        return ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
+            try:
+                yield api
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+                self.log.exception(e)
+
+                await session.close()
+                new_proxy_url = await self._proxy_manager.change_proxy(str(proxy_url))
+                api.session = ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
+            finally:
+                lock.release()
+                return
+
+        yield api
 
     async def state_preparation(self, symbol: str) -> List[Pair]:
-        api, session_id = await self._get_api()
         while True:
-            try:
+            async with self.get_api() as api:
                 result: Dict[
                     str,
                     Tuple[float, float],
                 ] = await api.fetch_order_book(symbol, limit=str(self.limit))
                 break
-            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
-                if self._proxy_manager is None:
-                    raise
-
-                api.session = await self._change_session(session_id)
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)
@@ -101,17 +105,10 @@ class BaseExchange:
                      trade_book=prices_ask)]
 
     async def fetch_prices(self) -> List[Pair]:
-        api, session_id = await self._get_api()
         while True:
-            try:
+            async with self.get_api() as api:
                 markets = await api.fetch_markets()
                 break
-            except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
-                if self._proxy_manager is None:
-                    raise
-
-                api.session = await self._change_session(session_id)
 
         symbols = [
             market['symbol']

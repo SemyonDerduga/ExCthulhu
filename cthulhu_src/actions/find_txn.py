@@ -24,7 +24,7 @@ async def run(ctx, max_depth, exchange_list,
               start_node, start_amount, cache_dir,
               current_node=None, current_amount=None,
               cached=False, proxy=False, proxy_db='proxy.sqlite',
-              active_proxies=25, proxy_pool=50):
+              active_proxies=20, proxy_pool=60):
     """
 
     :param proxy_db:
