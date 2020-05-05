@@ -44,6 +44,9 @@ def calc_price(trading_amount: float, current_trade_book: TradeBook) -> Optional
 
 
 def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
+    if task.max_depth < 3:
+        return []
+
     second_amount = calc_price(task.current_amount, adj_list[task.current_node][task.second_node])
     if second_amount is None:
         return []
@@ -56,14 +59,13 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
     result = []
 
     def dfs(current_node: NodeID, amount: float):
-        if len(path) <= task.max_depth - 1:
-            if task.finish_node in adj_list[current_node]:
-                final_calculated_price = calc_price(amount, adj_list[current_node][task.finish_node])
-                if final_calculated_price is not None and final_calculated_price > task.start_amount:
-                    result.append(path.copy() + [(task.finish_node, final_calculated_price)])
+        if task.finish_node in adj_list[current_node]:
+            final_calculated_price = calc_price(amount, adj_list[current_node][task.finish_node])
+            if final_calculated_price is not None and final_calculated_price > task.start_amount:
+                result.append(path.copy() + [(task.finish_node, final_calculated_price)])
 
-            if len(path) == task.max_depth - 1:
-                return
+        if len(path) == task.max_depth - 1:
+            return
 
         for node, trade_book in adj_list[current_node].items():
             if node not in seen:
