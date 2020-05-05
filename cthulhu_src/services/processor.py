@@ -1,6 +1,7 @@
 import logging
 import os
 import itertools
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from multiprocessing import Process, Queue
@@ -87,6 +88,29 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
     return result
 
 
+@contextmanager
+def workers(*args, **kwargs):
+    processes = [
+        Process(*args, **kwargs)
+        for _ in range(os.cpu_count())
+    ]
+
+    begin = time()
+    for process in processes:
+        process.start()
+
+    try:
+        yield
+        end = time()
+        delta_ms = (end - begin) * 1000
+        logger.info(f'Processed in {delta_ms} ms')
+    finally:
+        for process in processes:
+            process.terminate()
+            process.join()
+            process.close()
+
+
 # max_depth includes start element
 # example: max_depth=5 -> [0, 1, 2, 3, 0]
 def find_paths(adj_list: AdjacencyList,
@@ -119,33 +143,16 @@ def find_paths(adj_list: AdjacencyList,
         task_queue.put(task)
 
     result_queue = Queue()
-    processes = [
-        Process(target=worker, args=(adj_list, task_queue, result_queue))
-        for _ in range(os.cpu_count())
-    ]
-
-    begin = time()
-    for process in processes:
-        process.start()
-
-    results = [
-        result_queue.get()
-        for _ in tqdm(range(len(worker_tasks)), unit='task', dynamic_ncols=True)
-    ]
-    end = time()
-    delta_ms = (end - begin) * 1000
-    logger.info(f'{delta_ms} ms elapsed')
-
-    for process in processes:
-        process.terminate()
-
+    with workers(target=worker, args=(adj_list, task_queue, result_queue)):
+        results = [
+            result_queue.get()
+            for _ in tqdm(range(len(worker_tasks)), unit='task', dynamic_ncols=True)
+        ]
     return list(itertools.chain(*results))
 
 
 def worker(adj_list: AdjacencyList, task_queue: Queue, result_queue: Queue):
     while True:
         task = task_queue.get()
-        if task is None:
-            break
         result = find_paths_worker(adj_list, task)
         result_queue.put(result)
