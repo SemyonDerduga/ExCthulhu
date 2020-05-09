@@ -86,7 +86,7 @@ class ProxyManager:
                     break
 
                 except sqlite3.IntegrityError as e:
-                    logger.info(e)
+                    logger.debug(e)
 
         broker_task.cancel()
         await broker_task

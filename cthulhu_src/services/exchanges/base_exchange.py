@@ -59,6 +59,8 @@ class BaseExchange:
             api.session = session
             self._session_index = (self._session_index + 1) % len(self._sessions)
 
+            self.log.debug(f'use {proxy_url}')
+
             try:
                 yield api
             except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
