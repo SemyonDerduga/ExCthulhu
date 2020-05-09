@@ -3,7 +3,7 @@ import logging
 import traceback
 from contextlib import contextmanager, asynccontextmanager
 from typing import Tuple, Dict, List, Optional
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 import ccxt.async_support as ccxt
 from aiohttp_proxy import ProxyConnector
 
@@ -31,7 +31,10 @@ class BaseExchange:
             for proxy in proxy_manager.get_active_proxies():
                 connector = ProxyConnector.from_url(proxy)
                 proxy_url = connector.proxy_url
-                self._sessions.append((proxy_url, ClientSession(connector=connector), asyncio.Lock()))
+                self._sessions.append((proxy_url,
+                                       ClientSession(connector=connector,
+                                                     timeout=ClientTimeout(total=10)),
+                                       asyncio.Lock()))
 
             if 'rateLimit' in self.opts:
                 self.opts['rateLimit'] = int(self.opts['rateLimit'] / len(self._sessions))
