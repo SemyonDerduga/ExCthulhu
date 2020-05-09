@@ -68,8 +68,6 @@ class BaseExchange:
                 yield api
             except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
                     ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
-                self.log.exception(e)
-
                 await session.close()
                 new_proxy_url = await self._proxy_manager.change_proxy(str(proxy_url))
                 api.session = ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
