@@ -1,7 +1,6 @@
 import asyncio
 import logging
-import traceback
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager
 from typing import Tuple, Dict, List, Optional
 from aiohttp import ClientSession, ClientTimeout
 import ccxt.async_support as ccxt
@@ -67,7 +66,7 @@ class BaseExchange:
             try:
                 yield api
             except (ccxt.DDoSProtection, ccxt.RequestTimeout, ccxt.AuthenticationError,
-                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError) as e:
+                    ccxt.ExchangeNotAvailable, ccxt.ExchangeError, ccxt.NetworkError):
                 await session.close()
                 new_proxy_url = await self._proxy_manager.change_proxy(str(proxy_url))
                 api.session = ClientSession(connector=ProxyConnector.from_url(new_proxy_url))
