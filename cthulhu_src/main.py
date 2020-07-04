@@ -9,10 +9,10 @@ import click
 from cthulhu_src.utils import logger
 
 # import commands
-from cthulhu_src.routes.find_txn import find
 from cthulhu_src.routes.config import config
+from cthulhu_src.routes.find_txn import find
 from cthulhu_src.routes.exchanges import exchanges
-
+from cthulhu_src.routes.available_io import available_io
 
 @click.group()
 @click.pass_context
@@ -24,6 +24,7 @@ def cli(ctx):
 cli.add_command(find)
 cli.add_command(config)
 cli.add_command(exchanges)
+cli.add_command(available_io)
 
 
 def main():

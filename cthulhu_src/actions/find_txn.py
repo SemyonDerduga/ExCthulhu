@@ -80,7 +80,6 @@ async def run(ctx, max_depth, exchange_list,
                        current_amount=current_amount,
                        max_depth=max_depth)
     log.info(f'Finish data processing')
-    log.info(f'Finish data processing')
 
     # Sort result by profit
     paths.sort(key=lambda x: x[-1][1])
