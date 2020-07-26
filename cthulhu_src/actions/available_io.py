@@ -99,12 +99,23 @@ def run(cxt, exchange):
         available = [f"{exchange}_{currency}" for currency in list(set(available_cur))]
         log.info(f"Всего доступных для ввода валют {len(available)}")
         log.info(f"Всего недоступных для ввода валют {len(not_available)}")
-    elif exchange == 'binance':
+    else:
 
-        ccxt_yobit = ccxt.binance()
+        exchanges_instances = {
+            'binance': ccxt.binance(),
+            'dsx': ccxt.dsx(),
+            'exmo': ccxt.exmo(),
+            'hollaex': ccxt.hollaex(),
+            'oceanex': ccxt.oceanex(),
+            'poloniex': ccxt.poloniex(),
+            'tidex': ccxt.tidex(),
+            'upbit': ccxt.upbit(),
+        }
+
+        ccxt_exchanger = exchanges_instances[exchange]
 
         values = []
-        for market in ccxt_yobit.fetch_markets():
+        for market in ccxt_exchanger.fetch_markets():
             values.append(market['symbol'].split('/')[0])
             values.append(market['symbol'].split('/')[1])
         available = [f"{exchange}_{currency}" for currency in list(set(values))]
