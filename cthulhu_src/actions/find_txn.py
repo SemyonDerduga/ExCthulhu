@@ -4,6 +4,7 @@ from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
 from cthulhu_src.services.processor import find_paths
+from cthulhu_src.services.cross_exchange_manager import get_free_transitions
 
 """
     Find winning transaction.
@@ -46,6 +47,8 @@ async def run(ctx, max_depth, exchange_list,
         pairs = await exchange_manager.fetch_prices()
     finally:
         await exchange_manager.close()
+
+    pairs += get_free_transitions(exchange_list)
 
     log.info(f'Finish loading')
 

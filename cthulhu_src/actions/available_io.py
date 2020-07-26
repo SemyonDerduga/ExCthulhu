@@ -1,18 +1,25 @@
 import os
 import json
 
+import ccxt
+import sys
 import logging
 import hmac, hashlib
+from pathlib import Path
+from os.path import expanduser
 import urllib, http.client
-import ccxt
 
 API_KEY = 'AC658D535F4112404C1CC449016CBE1E'
 API_SECRET = b'7d1baac2ff2c66134b70ad6745aa6106'
+AVAILABLE_IO_DIR = expanduser("~/.cache/cthulhu/available_io")
 
 
 def run(cxt, exchange):
     log = logging.getLogger('excthulhu')
     log.info(f"Start getting available i/o value for {exchange}...")
+
+    available_cur = []
+    not_available = []
 
     if exchange == 'yobit':
 
@@ -65,7 +72,7 @@ def run(cxt, exchange):
             except json.decoder.JSONDecodeError:
                 raise YobitException('Ошибка анализа возвращаемых данных, получена строка', response)
 
-        ccxt_yobit = ccxt.dsx()
+        ccxt_yobit = ccxt.yobit()
 
         values = []
         for market in ccxt_yobit.fetch_markets():
@@ -73,19 +80,45 @@ def run(cxt, exchange):
             values.append(market['symbol'].split('/')[1])
         values = set(values)
 
+
         log.info(f"Всего валют {len(values)}")
 
-        available = []
-        not_available = []
+
 
         for value in values:
+            print(value)
             try:
                 #log.info(f'Получаем кошель для пополнения ({value})')
                 call_api(method="GetDepositAddress", coinName=value)
-                available.append(value)
+                available_cur.append(value)
             except YobitException as e:
                 print(e)
                 not_available.append(value)
 
+        available = [f"{exchange}_{currency}" for currency in list(set(available_cur))]
         log.info(f"Всего доступных для ввода валют {len(available)}")
         log.info(f"Всего недоступных для ввода валют {len(not_available)}")
+    elif exchange == 'binance':
+
+        ccxt_yobit = ccxt.binance()
+
+        values = []
+        for market in ccxt_yobit.fetch_markets():
+            values.append(market['symbol'].split('/')[0])
+            values.append(market['symbol'].split('/')[1])
+        available = [f"{exchange}_{currency}" for currency in list(set(values))]
+
+
+
+    log.info(f"Save avalible currency list for exchange {exchange}")
+    cache_dir_path = Path(os.path.expanduser(AVAILABLE_IO_DIR))
+    cache_dir_path.mkdir(parents=True, exist_ok=True)
+
+    input_file_path = os.path.join(AVAILABLE_IO_DIR, f"{exchange}_input.txt")
+    with open(input_file_path, "w") as f:
+        f.write("\n".join(available))
+
+    output_file_path = os.path.join(AVAILABLE_IO_DIR, f"{exchange}_output.txt")
+    with open(output_file_path, "w") as f:
+        f.write("\n".join(available))
+
