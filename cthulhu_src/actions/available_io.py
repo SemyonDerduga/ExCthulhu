@@ -88,9 +88,10 @@ def run(cxt, exchange):
         for value in values:
             print(value)
             try:
-                #log.info(f'Получаем кошель для пополнения ({value})')
-                call_api(method="GetDepositAddress", coinName=value)
-                available_cur.append(value)
+                log.info(f'Получаем кошель для пополнения ({value})')
+                resp = call_api(method="GetDepositAddress", coinName=value)
+                if not resp["return"]["status"] == "maintenance":
+                    available_cur.append(value)
             except YobitException as e:
                 print(e)
                 not_available.append(value)
