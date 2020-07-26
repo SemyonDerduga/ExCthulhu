@@ -36,7 +36,6 @@ def get_free_transitions(exchanges):
     for cur_out in currency_out:
         for cur_in in currency_in:
             if cur_out.split('_')[1] == cur_in.split('_')[1] and cur_out.split('_')[0] != cur_in.split('_')[0]:
-                print(f"{cur_out} -> {cur_in}")
                 pairs.append(Pair(cur_out, cur_in, [Order(1, math.inf)]))
 
     return pairs
