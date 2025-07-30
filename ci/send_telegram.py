@@ -27,8 +27,13 @@ def get_chat_ids() -> set[str]:
     return chat_ids
 
 
+MAX_MESSAGE_LEN = 4096
+
+
 def send_message(chat_id: str, text: str) -> None:
-    api_call("sendMessage", {"chat_id": chat_id, "text": text})
+    """Send message to Telegram splitting it into chunks if needed."""
+    for i in range(0, len(text), MAX_MESSAGE_LEN):
+        api_call("sendMessage", {"chat_id": chat_id, "text": text[i : i + MAX_MESSAGE_LEN]})
 
 
 def main():
