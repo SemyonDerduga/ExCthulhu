@@ -86,7 +86,11 @@ class BaseExchange:
         ]
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._with_proxy().fetch_markets()
+        try:
+            markets = await self._with_proxy().fetch_markets()
+        except Exception as exc:  # network errors, timeouts, etc.
+            self.log.warning(f"Failed to fetch markets: {exc}")
+            return []
 
         symbols = [market["symbol"] for market in markets]
 
