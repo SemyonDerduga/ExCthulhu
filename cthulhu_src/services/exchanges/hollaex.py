@@ -2,9 +2,9 @@ from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
 
 class Hollaex(BatchingExchange):
-    name = 'hollaex'
+    name = "hollaex"
     opts = {
-        'enableRateLimit': True,
+        "enableRateLimit": True,
     }
 
     max_batch_size = 200

@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from cthulhu_src.services.pair import AdjacencyList, NodeID, TradeBook
 
-logger = logging.getLogger('excthulhu')
+logger = logging.getLogger("excthulhu")
 
 
 @dataclass
@@ -48,7 +48,9 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
     if task.max_depth < 3:
         return []
 
-    second_amount = calc_price(task.current_amount, adj_list[task.current_node][task.second_node])
+    second_amount = calc_price(
+        task.current_amount, adj_list[task.current_node][task.second_node]
+    )
     if second_amount is None:
         return []
 
@@ -61,9 +63,16 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
 
     def dfs(current_node: NodeID, amount: float):
         if task.finish_node in adj_list[current_node]:
-            final_calculated_price = calc_price(amount, adj_list[current_node][task.finish_node])
-            if final_calculated_price is not None and final_calculated_price > task.start_amount:
-                result.append(path.copy() + [(task.finish_node, final_calculated_price)])
+            final_calculated_price = calc_price(
+                amount, adj_list[current_node][task.finish_node]
+            )
+            if (
+                final_calculated_price is not None
+                and final_calculated_price > task.start_amount
+            ):
+                result.append(
+                    path.copy() + [(task.finish_node, final_calculated_price)]
+                )
 
         if len(path) == task.max_depth - 1:
             return
@@ -90,10 +99,7 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
 
 @contextmanager
 def workers(*args, **kwargs):
-    processes = [
-        Process(*args, **kwargs)
-        for _ in range(os.cpu_count())
-    ]
+    processes = [Process(*args, **kwargs) for _ in range(os.cpu_count())]
 
     begin = time()
     for process in processes:
@@ -103,7 +109,7 @@ def workers(*args, **kwargs):
         yield
         end = time()
         delta_ms = (end - begin) * 1000
-        logger.info(f'Processed in {delta_ms} ms')
+        logger.info(f"Processed in {delta_ms} ms")
     finally:
         for process in processes:
             process.terminate()
@@ -113,28 +119,36 @@ def workers(*args, **kwargs):
 
 # max_depth includes start element
 # example: max_depth=5 -> [0, 1, 2, 3, 0]
-def find_paths(adj_list: AdjacencyList,
-               start_node: NodeID, start_amount: float,
-               current_node: Optional[NodeID] = None, current_amount: Optional[int] = None,
-               max_depth: int = 5) -> List[Path]:
+def find_paths(
+    adj_list: AdjacencyList,
+    start_node: NodeID,
+    start_amount: float,
+    current_node: Optional[NodeID] = None,
+    current_amount: Optional[int] = None,
+    max_depth: int = 5,
+) -> List[Path]:
     if current_node is not None and current_amount is not None:
         worker_tasks = [
-            Task(current_node=current_node,
-                 second_node=second_node,
-                 finish_node=start_node,
-                 start_amount=start_amount,
-                 current_amount=current_amount,
-                 max_depth=max_depth)
+            Task(
+                current_node=current_node,
+                second_node=second_node,
+                finish_node=start_node,
+                start_amount=start_amount,
+                current_amount=current_amount,
+                max_depth=max_depth,
+            )
             for second_node in adj_list[current_node].keys()
         ]
     else:
         worker_tasks = [
-            Task(current_node=start_node,
-                 second_node=second_node,
-                 finish_node=start_node,
-                 start_amount=start_amount,
-                 current_amount=start_amount,
-                 max_depth=max_depth)
+            Task(
+                current_node=start_node,
+                second_node=second_node,
+                finish_node=start_node,
+                start_amount=start_amount,
+                current_amount=start_amount,
+                max_depth=max_depth,
+            )
             for second_node in adj_list[start_node].keys()
         ]
 
@@ -146,7 +160,7 @@ def find_paths(adj_list: AdjacencyList,
     with workers(target=worker, args=(adj_list, task_queue, result_queue)):
         results = [
             result_queue.get()
-            for _ in tqdm(range(len(worker_tasks)), unit='task', dynamic_ncols=True)
+            for _ in tqdm(range(len(worker_tasks)), unit="task", dynamic_ncols=True)
         ]
     return list(itertools.chain(*results))
 

@@ -11,12 +11,12 @@ from cthulhu_src.services.pair import Pair, Order
 class BaseExchange:
     currency_blacklist = []
     opts = {
-        'enableRateLimit': True,
+        "enableRateLimit": True,
     }
-    name = ''
+    name = ""
     limit = 2000
     fee = 0
-    log = logging.getLogger('excthulhu')
+    log = logging.getLogger("excthulhu")
 
     def __init__(self, proxies=()):
         exchange_class = getattr(ccxt, self.name)
@@ -27,10 +27,12 @@ class BaseExchange:
                 connector = ProxyConnector.from_url(proxy)
                 self._sessions.append(ClientSession(connector=connector))
 
-            if 'rateLimit' in self.opts:
-                self.opts['rateLimit'] = int(self.opts['rateLimit'] / len(self._sessions))
+            if "rateLimit" in self.opts:
+                self.opts["rateLimit"] = int(
+                    self.opts["rateLimit"] / len(self._sessions)
+                )
             else:
-                self.opts['rateLimit'] = exchange_class().describe()['rateLimit']
+                self.opts["rateLimit"] = exchange_class().describe()["rateLimit"]
 
         self._session_index = 0
 
@@ -57,45 +59,41 @@ class BaseExchange:
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)
-            for bid_price, bid_amount in result['bids']
+            for bid_price, bid_amount in result["bids"]
         ]
         prices_ask = [
             Order(price=1.0 / ask_price, amount=ask_amount * ask_price)
-            for ask_price, ask_amount in result['asks']
+            for ask_price, ask_amount in result["asks"]
         ]
 
         if len(prices_bid) == 0 or len(prices_ask) == 0:
             return []
 
-        pair = symbol.split('/')
-        self.log.debug(f'{self.name}_{pair[0]} - {self.name}_{pair[1]}')
-        return [Pair(currency_from=f'{self.name}_{pair[0]}',
-                     currency_to=f'{self.name}_{pair[1]}',
-                     trade_book=prices_bid),
-                Pair(currency_from=f'{self.name}_{pair[1]}',
-                     currency_to=f'{self.name}_{pair[0]}',
-                     trade_book=prices_ask)]
+        pair = symbol.split("/")
+        self.log.debug(f"{self.name}_{pair[0]} - {self.name}_{pair[1]}")
+        return [
+            Pair(
+                currency_from=f"{self.name}_{pair[0]}",
+                currency_to=f"{self.name}_{pair[1]}",
+                trade_book=prices_bid,
+            ),
+            Pair(
+                currency_from=f"{self.name}_{pair[1]}",
+                currency_to=f"{self.name}_{pair[0]}",
+                trade_book=prices_ask,
+            ),
+        ]
 
     async def fetch_prices(self) -> List[Pair]:
         markets = await self._with_proxy().fetch_markets()
 
-        symbols = [
-            market['symbol']
-            for market in markets
-        ]
+        symbols = [market["symbol"] for market in markets]
 
-        currency = set([
-            cur
-            for cur_pair in symbols
-            for cur in cur_pair.split('/')
-        ])
+        currency = set([cur for cur_pair in symbols for cur in cur_pair.split("/")])
 
-        self.log.info(f'Received {len(currency)} сurrency.')
+        self.log.info(f"Received {len(currency)} сurrency.")
 
-        promises = [
-            self.state_preparation(symbol)
-            for symbol in symbols
-        ]
+        promises = [self.state_preparation(symbol) for symbol in symbols]
 
         pairs: List[Pair] = [
             pair
@@ -104,7 +102,7 @@ class BaseExchange:
             if len(pair.trade_book) > 0
         ]
 
-        self.log.info(f'Received {len(pairs)} сurrency pairs exchange prices.')
+        self.log.info(f"Received {len(pairs)} сurrency pairs exchange prices.")
         return pairs
 
     @classmethod

@@ -2,9 +2,9 @@ from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
 
 class Tidex(BatchingExchange):
-    name = 'tidex'
+    name = "tidex"
     opts = {
-        'enableRateLimit': True,
+        "enableRateLimit": True,
     }
 
     max_batch_size = 400

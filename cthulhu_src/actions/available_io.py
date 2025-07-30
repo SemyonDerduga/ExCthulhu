@@ -2,35 +2,36 @@ import os
 import json
 
 import ccxt
-import sys
 import logging
-import hmac, hashlib
+import hmac
+import hashlib
 from pathlib import Path
 from os.path import expanduser
-import urllib, http.client
+import urllib.parse
+import http.client
 
-API_KEY = 'AC658D535F4112404C1CC449016CBE1E'
-API_SECRET = b'7d1baac2ff2c66134b70ad6745aa6106'
+API_KEY = "AC658D535F4112404C1CC449016CBE1E"
+API_SECRET = b"7d1baac2ff2c66134b70ad6745aa6106"
 AVAILABLE_IO_DIR = expanduser("~/.cache/cthulhu/available_io")
 
 
 def run(cxt, exchange):
-    log = logging.getLogger('excthulhu')
+    log = logging.getLogger("excthulhu")
     log.info(f"Start getting available i/o value for {exchange}...")
 
     available_cur = []
     not_available = []
 
-    if exchange == 'yobit':
+    if exchange == "yobit":
 
         """
-            Каждый новый запрос к серверу должен содержать увеличенное число в диапазоне 1-2147483646
-            Поэтому храним число в файле поблизости, каждый раз обновляя его
+        Каждый новый запрос к серверу должен содержать увеличенное число в диапазоне 1-2147483646
+        Поэтому храним число в файле поблизости, каждый раз обновляя его
         """
         nonce_file = "./nonce"
         if not os.path.exists(nonce_file):
             with open(nonce_file, "w") as out:
-                out.write('1')
+                out.write("1")
 
         # Будем перехватывать все сообщения об ошибках с биржи
         class YobitException(Exception):
@@ -38,25 +39,27 @@ def run(cxt, exchange):
 
         def call_api(**kwargs):
             # При каждом обращении к торговому API увеличиваем счетчик nonce на единицу
-            with open(nonce_file, 'r+') as inp:
+            with open(nonce_file, "r+") as inp:
                 nonce = int(inp.read())
                 inp.seek(0)
                 inp.write(str(nonce + 1))
                 inp.truncate()
 
-            payload = {'nonce': nonce}
+            payload = {"nonce": nonce}
 
             if kwargs:
                 payload.update(kwargs)
             payload = urllib.parse.urlencode(payload)
 
             H = hmac.new(key=API_SECRET, digestmod=hashlib.sha512)
-            H.update(payload.encode('utf-8'))
+            H.update(payload.encode("utf-8"))
             sign = H.hexdigest()
 
-            headers = {"Content-type": "application/x-www-form-urlencoded",
-                       "Key": API_KEY,
-                       "Sign": sign}
+            headers = {
+                "Content-type": "application/x-www-form-urlencoded",
+                "Key": API_KEY,
+                "Sign": sign,
+            }
             conn = http.client.HTTPSConnection("yobit.net", timeout=60)
             conn.request("POST", "/tapi/", payload, headers)
             response = conn.getresponse().read()
@@ -64,31 +67,30 @@ def run(cxt, exchange):
             conn.close()
 
             try:
-                obj = json.loads(response.decode('utf-8'))
+                obj = json.loads(response.decode("utf-8"))
 
-                if 'error' in obj and obj['error']:
-                    raise YobitException(obj['error'])
+                if "error" in obj and obj["error"]:
+                    raise YobitException(obj["error"])
                 return obj
             except json.decoder.JSONDecodeError:
-                raise YobitException('Ошибка анализа возвращаемых данных, получена строка', response)
+                raise YobitException(
+                    "Ошибка анализа возвращаемых данных, получена строка", response
+                )
 
         ccxt_yobit = ccxt.yobit()
 
         values = []
         for market in ccxt_yobit.fetch_markets():
-            values.append(market['symbol'].split('/')[0])
-            values.append(market['symbol'].split('/')[1])
+            values.append(market["symbol"].split("/")[0])
+            values.append(market["symbol"].split("/")[1])
         values = set(values)
 
-
         log.info(f"Всего валют {len(values)}")
-
-
 
         for value in values:
             print(value)
             try:
-                log.info(f'Получаем кошель для пополнения ({value})')
+                log.info(f"Получаем кошель для пополнения ({value})")
                 resp = call_api(method="GetDepositAddress", coinName=value)
                 if not resp["return"]["status"] == "maintenance":
                     available_cur.append(value)
@@ -102,25 +104,23 @@ def run(cxt, exchange):
     else:
 
         exchanges_instances = {
-            'binance': ccxt.binance(),
-            'dsx': ccxt.dsx(),
-            'exmo': ccxt.exmo(),
-            'hollaex': ccxt.hollaex(),
-            'oceanex': ccxt.oceanex(),
-            'poloniex': ccxt.poloniex(),
-            'tidex': ccxt.tidex(),
-            'upbit': ccxt.upbit(),
+            "binance": ccxt.binance(),
+            "dsx": ccxt.dsx(),
+            "exmo": ccxt.exmo(),
+            "hollaex": ccxt.hollaex(),
+            "oceanex": ccxt.oceanex(),
+            "poloniex": ccxt.poloniex(),
+            "tidex": ccxt.tidex(),
+            "upbit": ccxt.upbit(),
         }
 
         ccxt_exchanger = exchanges_instances[exchange]
 
         values = []
         for market in ccxt_exchanger.fetch_markets():
-            values.append(market['symbol'].split('/')[0])
-            values.append(market['symbol'].split('/')[1])
+            values.append(market["symbol"].split("/")[0])
+            values.append(market["symbol"].split("/")[1])
         available = [f"{exchange}_{currency}" for currency in list(set(values))]
-
-
 
     log.info(f"Save avalible currency list for exchange {exchange}")
     cache_dir_path = Path(os.path.expanduser(AVAILABLE_IO_DIR))
@@ -133,4 +133,3 @@ def run(cxt, exchange):
     output_file_path = os.path.join(AVAILABLE_IO_DIR, f"{exchange}_output.txt")
     with open(output_file_path, "w") as f:
         f.write("\n".join(available))
-

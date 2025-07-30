@@ -3,9 +3,9 @@ from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
 # doesn't work
 class Dsx(BatchingExchange):
-    name = 'dsx'
+    name = "dsx"
     opts = {
-        'enableRateLimit': True,
+        "enableRateLimit": True,
     }
 
     max_batch_size = 20
