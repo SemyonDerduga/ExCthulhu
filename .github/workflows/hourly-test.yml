@@ -36,3 +36,13 @@ jobs:
           printf "Hourly tests %s\n" "$STATUS" > message.txt
           tail -n 20 pytest.log >> message.txt
           python ci/send_telegram.py < message.txt
+      - name: Run find command
+        if: always()
+        id: find
+        run: |
+          python -m cthulhu_src.main find -s binance_BTC | tee find.log
+        continue-on-error: true
+      - name: Send find result to Telegram
+        if: always()
+        run: |
+          python ci/send_telegram.py < find.log
