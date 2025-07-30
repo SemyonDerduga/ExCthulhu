@@ -1,0 +1,38 @@
+name: Hourly Tests
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Run tests
+        id: tests
+        run: |
+          pytest | tee pytest.log
+        continue-on-error: true
+      - name: Send result to Telegram
+        if: always()
+        run: |
+          if [ "${{ steps.tests.outcome }}" == "success" ]; then
+            STATUS="PASSED"
+          else
+            STATUS="FAILED"
+          fi
+          printf "Hourly tests %s\n" "$STATUS" > message.txt
+          tail -n 20 pytest.log >> message.txt
+          python ci/send_telegram.py < message.txt
