@@ -15,7 +15,7 @@ class BatchingExchange(BaseExchange):
                 str,
                 List[Tuple[float, float]],
             ],
-        ] = await self._with_proxy().fetch_order_books(symbols, limit=str(self.limit))
+        ] = await self._with_proxy().fetch_order_books(symbols, limit=self.limit)
 
         results = []
         for symbol, info in markets.items():
