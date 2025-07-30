@@ -1,4 +1,3 @@
-import math
 from cthulhu_src.services.processor import calc_price, find_paths_worker, Task
 from cthulhu_src.services.pair import Order
 
@@ -21,10 +20,7 @@ def test_calc_price_not_enough():
 
 def test_find_paths_worker_simple_profit():
     # adjacency list for two nodes 0 and 1
-    adj_list = [
-        {1: [Order(price=2, amount=10)]},
-        {0: [Order(price=0.6, amount=10)]}
-    ]
+    adj_list = [{1: [Order(price=2, amount=10)]}, {0: [Order(price=0.6, amount=10)]}]
     task = Task(
         current_node=0,
         second_node=1,
@@ -38,9 +34,6 @@ def test_find_paths_worker_simple_profit():
 
 
 def test_find_paths_worker_insufficient_depth():
-    adj_list = [
-        {1: [Order(price=2, amount=10)]},
-        {0: [Order(price=0.6, amount=10)]}
-    ]
+    adj_list = [{1: [Order(price=2, amount=10)]}, {0: [Order(price=0.6, amount=10)]}]
     task = Task(0, 1, 0, 1.0, 1.0, 2)
     assert find_paths_worker(adj_list, task) == []

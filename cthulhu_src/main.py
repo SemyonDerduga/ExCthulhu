@@ -14,6 +14,7 @@ from cthulhu_src.routes.find_txn import find
 from cthulhu_src.routes.exchanges import exchanges
 from cthulhu_src.routes.available_io import available_io
 
+
 @click.group()
 @click.pass_context
 def cli(ctx):
@@ -29,19 +30,19 @@ cli.add_command(available_io)
 
 def main():
     """
-        Before command routing initialize global objects.
-        :return: int - exit status
+    Before command routing initialize global objects.
+    :return: int - exit status
     """
     debug = False
-    if '--debug' in sys.argv:
-        sys.argv.remove('--debug')
-        log = logger.init(debug=True)
+    if "--debug" in sys.argv:
+        sys.argv.remove("--debug")
+        logger.init(debug=True)
         debug = True
     else:
-        log = logger.init()
+        logger.init()
 
     sys.exit(cli(obj={"debug": debug}))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

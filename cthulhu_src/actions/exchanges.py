@@ -8,6 +8,4 @@ from tabulate import tabulate
 
 def run(ctx):
     table = [[exchange] for exchange in ccxt.exchanges]
-    print(tabulate(table, ['Exchanges'], tablefmt="grid"))
-
-
+    print(tabulate(table, ["Exchanges"], tablefmt="grid"))

@@ -5,19 +5,31 @@ import os
 from pathlib import Path
 from typing import List, Dict
 
-from cthulhu_src.services.exchanges import *
+from cthulhu_src.services.exchanges import (
+    BaseExchange,
+    Binance,
+    Dsx,
+    Exmo,
+    Hollaex,
+    Oceanex,
+    Poloniex,
+    Tidex,
+    Upbit,
+    Yobit,
+    GenericExchange,
+)
 from cthulhu_src.services.pair import Pair, Order
 
 exchanges_instances = {
-    'binance': Binance,
-    'dsx': Dsx,
-    'exmo': Exmo,
-    'hollaex': Hollaex,
-    'oceanex': Oceanex,
-    'poloniex': Poloniex,
-    'tidex': Tidex,
-    'upbit': Upbit,
-    'yobit': Yobit,
+    "binance": Binance,
+    "dsx": Dsx,
+    "exmo": Exmo,
+    "hollaex": Hollaex,
+    "oceanex": Oceanex,
+    "poloniex": Poloniex,
+    "tidex": Tidex,
+    "upbit": Upbit,
+    "yobit": Yobit,
 }
 
 
@@ -30,10 +42,16 @@ def get_exchange_by_name(exchange_name, proxies):
 
 class ExchangeManager:
     """
-        ExchangeManager - asynchronous data collection from exchanges
+    ExchangeManager - asynchronous data collection from exchanges
     """
 
-    def __init__(self, exchanges: List[str], proxies=(), cached=False, cache_dir='~/.cache/cthulhu'):
+    def __init__(
+        self,
+        exchanges: List[str],
+        proxies=(),
+        cached=False,
+        cache_dir="~/.cache/cthulhu",
+    ):
         """
         Creates cache directory
         Creates list of cached exchanges
@@ -51,9 +69,10 @@ class ExchangeManager:
             cache_dir_path.mkdir(parents=True, exist_ok=True)
             self._cache_dir = cache_dir_path.absolute()
             self._cached_exchanges = [
-                name[:name.rindex('.json')]
+                name[: name.rindex(".json")]
                 for name in os.listdir(self._cache_dir)
-                if os.path.isfile(f'{self._cache_dir}/{name}') and name.endswith('.json')
+                if os.path.isfile(f"{self._cache_dir}/{name}")
+                and name.endswith(".json")
             ]
 
         self._exchanges: Dict[str, BaseExchange] = {
@@ -63,16 +82,17 @@ class ExchangeManager:
         }
 
     async def close(self):
-        await asyncio.gather(*[
-            exchange.close()
-            for exchange in self._exchanges.values()
-        ])
+        await asyncio.gather(
+            *[exchange.close() for exchange in self._exchanges.values()]
+        )
 
     async def fetch_prices(self) -> List[Pair]:
-        results = await asyncio.gather(*[
-            self.fetch_exchange_prices(exchange_name)
-            for exchange_name in self._exchange_names
-        ])
+        results = await asyncio.gather(
+            *[
+                self.fetch_exchange_prices(exchange_name)
+                for exchange_name in self._exchange_names
+            ]
+        )
 
         prices = list(itertools.chain(*results))
         return prices
@@ -84,30 +104,35 @@ class ExchangeManager:
             if not self._cached:
                 return prices
 
-            with open(f'{self._cache_dir}/{exchange_name}.json', 'w+') as file:
-                json.dump([
-                    {
-                        'currency_from': pair.currency_from,
-                        'currency_to': pair.currency_to,
-                        'trade_book': [(order.price, order.amount) for order in pair.trade_book],
-                    }
-                    for pair in prices
-                ], file)
+            with open(f"{self._cache_dir}/{exchange_name}.json", "w+") as file:
+                json.dump(
+                    [
+                        {
+                            "currency_from": pair.currency_from,
+                            "currency_to": pair.currency_to,
+                            "trade_book": [
+                                (order.price, order.amount) for order in pair.trade_book
+                            ],
+                        }
+                        for pair in prices
+                    ],
+                    file,
+                )
                 return prices
 
-        with open(f'{self._cache_dir}/{exchange_name}.json') as file:
+        with open(f"{self._cache_dir}/{exchange_name}.json") as file:
             data = json.load(file)
             return [
                 Pair(
-                    currency_from=pair['currency_from'],
-                    currency_to=pair['currency_to'],
+                    currency_from=pair["currency_from"],
+                    currency_to=pair["currency_to"],
                     trade_book=[
                         Order(
                             price=order[0],
                             amount=order[1],
                         )
-                        for order in pair['trade_book']
-                    ]
+                        for order in pair["trade_book"]
+                    ],
                 )
                 for pair in data
             ]

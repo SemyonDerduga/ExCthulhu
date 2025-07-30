@@ -21,50 +21,50 @@ class BatchingExchange(BaseExchange):
         for symbol, info in markets.items():
             prices_bid = [
                 Order(price=bid_price, amount=bid_amount)
-                for bid_price, bid_amount in info['bids']
+                for bid_price, bid_amount in info["bids"]
             ]
             prices_ask = [
                 Order(price=1.0 / ask_price, amount=ask_amount * ask_price)
-                for ask_price, ask_amount in info['asks']
+                for ask_price, ask_amount in info["asks"]
             ]
             if len(prices_bid) == 0 or len(prices_ask) == 0:
                 continue
 
-            currency_pair = symbol.split('/')
-            self.log.debug(f'{self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}')
-            results.append(Pair(currency_from=f'{self.name}_{currency_pair[0]}',
-                                currency_to=f'{self.name}_{currency_pair[1]}',
-                                trade_book=prices_bid))
-            results.append(Pair(currency_from=f'{self.name}_{currency_pair[1]}',
-                                currency_to=f'{self.name}_{currency_pair[0]}',
-                                trade_book=prices_ask))
+            currency_pair = symbol.split("/")
+            self.log.debug(
+                f"{self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}"
+            )
+            results.append(
+                Pair(
+                    currency_from=f"{self.name}_{currency_pair[0]}",
+                    currency_to=f"{self.name}_{currency_pair[1]}",
+                    trade_book=prices_bid,
+                )
+            )
+            results.append(
+                Pair(
+                    currency_from=f"{self.name}_{currency_pair[1]}",
+                    currency_to=f"{self.name}_{currency_pair[0]}",
+                    trade_book=prices_ask,
+                )
+            )
 
         return results
 
     async def fetch_prices(self) -> List[Pair]:
         markets = await self._with_proxy().fetch_markets()
-        symbols: [str] = [
-            market['symbol']
-            for market in markets
-        ]
+        symbols: [str] = [market["symbol"] for market in markets]
 
-        currency = set([
-            cur
-            for cur_pair in symbols
-            for cur in cur_pair.split('/')
-        ])
+        currency = set([cur for cur_pair in symbols for cur in cur_pair.split("/")])
 
-        self.log.info(f'Received {len(currency)} сurrency.')
+        self.log.info(f"Received {len(currency)} сurrency.")
 
         batches: List[List[str]] = [
-            symbols[i:i + self.max_batch_size]
+            symbols[i : i + self.max_batch_size]
             for i in range(0, len(symbols), self.max_batch_size)
         ]
 
-        promises = [
-            self.state_preparation(batch_symbols)
-            for batch_symbols in batches
-        ]
+        promises = [self.state_preparation(batch_symbols) for batch_symbols in batches]
 
         pairs: List[Pair] = [
             pair
@@ -73,5 +73,5 @@ class BatchingExchange(BaseExchange):
             if len(pair.trade_book) > 0
         ]
 
-        self.log.info(f'Received {len(pairs)} сurrency pairs exchange prices.')
+        self.log.info(f"Received {len(pairs)} сurrency pairs exchange prices.")
         return pairs

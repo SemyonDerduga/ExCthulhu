@@ -2,9 +2,9 @@ from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
 
 class Poloniex(BatchingExchange):
-    name = 'poloniex'
+    name = "poloniex"
     opts = {
-        'enableRateLimit': True,
+        "enableRateLimit": True,
     }
 
     max_batch_size = 200
