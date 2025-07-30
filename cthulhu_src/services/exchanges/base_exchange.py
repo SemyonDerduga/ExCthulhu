@@ -15,6 +15,7 @@ class BaseExchange:
     }
     name = ""
     limit = 2000
+    max_concurrent_requests = 20
     fee = 0
     log = logging.getLogger("excthulhu")
 
@@ -93,14 +94,24 @@ class BaseExchange:
 
         self.log.info(f"Received {len(currency)} сurrency.")
 
-        promises = [self.state_preparation(symbol) for symbol in symbols]
+        pairs: List[Pair] = []
 
-        pairs: List[Pair] = [
-            pair
-            for pairs in await asyncio.gather(*promises)
-            for pair in pairs
-            if len(pair.trade_book) > 0
-        ]
+        async def fetch(symbol: str) -> List[Pair]:
+            try:
+                return await self.state_preparation(symbol)
+            except Exception as exc:
+                self.log.warning(f"Failed to fetch {symbol}: {exc}")
+                return []
+
+        batch_size = self.max_concurrent_requests
+        for i in range(0, len(symbols), batch_size):
+            batch = symbols[i : i + batch_size]
+            self.log.debug(
+                f"Processing symbols {i+1}-{min(i+batch_size, len(symbols))} of {len(symbols)}"
+            )
+            results = await asyncio.gather(*[fetch(symbol) for symbol in batch])
+            for pairs_batch in results:
+                pairs.extend([p for p in pairs_batch if len(p.trade_book) > 0])
 
         self.log.info(f"Received {len(pairs)} сurrency pairs exchange prices.")
         return pairs
