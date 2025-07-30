@@ -55,7 +55,7 @@ class BaseExchange:
         result: Dict[
             str,
             Tuple[float, float],
-        ] = await self._with_proxy().fetch_order_book(symbol, limit=str(self.limit))
+        ] = await self._with_proxy().fetch_order_book(symbol, limit=self.limit)
 
         prices_bid = [
             Order(price=bid_price, amount=bid_amount)
