@@ -7,11 +7,21 @@ AVAILABLE_IO_DIR = expanduser("~/.cache/cthulhu/available_io")
 
 
 def get_free_transitions(exchanges):
-    input_avalible_currancy_files = [os.path.join(AVAILABLE_IO_DIR, f) for f in os.listdir(AVAILABLE_IO_DIR) if
-                                     (os.path.isfile(os.path.join(AVAILABLE_IO_DIR, f)) and f.endswith('_input.txt'))]
+    if not os.path.isdir(AVAILABLE_IO_DIR):
+        # directory with cached available currency lists does not exist
+        return []
 
-    output_avalible_currancy_files = [os.path.join(AVAILABLE_IO_DIR, f) for f in os.listdir(AVAILABLE_IO_DIR) if
-                                      (os.path.isfile(os.path.join(AVAILABLE_IO_DIR, f)) and f.endswith('_output.txt'))]
+    input_avalible_currancy_files = [
+        os.path.join(AVAILABLE_IO_DIR, f)
+        for f in os.listdir(AVAILABLE_IO_DIR)
+        if os.path.isfile(os.path.join(AVAILABLE_IO_DIR, f)) and f.endswith('_input.txt')
+    ]
+
+    output_avalible_currancy_files = [
+        os.path.join(AVAILABLE_IO_DIR, f)
+        for f in os.listdir(AVAILABLE_IO_DIR)
+        if os.path.isfile(os.path.join(AVAILABLE_IO_DIR, f)) and f.endswith('_output.txt')
+    ]
 
     pairs = []
     currency_out = []
