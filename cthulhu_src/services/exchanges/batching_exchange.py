@@ -52,7 +52,11 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
-        markets = await self._with_proxy().fetch_markets()
+        try:
+            markets = await self._with_proxy().fetch_markets()
+        except Exception as exc:
+            self.log.warning(f"Failed to fetch markets: {exc}")
+            return []
         symbols: [str] = [market["symbol"] for market in markets]
 
         currency = set([cur for cur_pair in symbols for cur in cur_pair.split("/")])

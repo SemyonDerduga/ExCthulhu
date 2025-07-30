@@ -2,6 +2,7 @@ import asyncio
 import itertools
 import json
 import os
+import logging
 from pathlib import Path
 from typing import List, Dict
 
@@ -91,16 +92,31 @@ class ExchangeManager:
             *[
                 self.fetch_exchange_prices(exchange_name)
                 for exchange_name in self._exchange_names
-            ]
+            ],
+            return_exceptions=True,
         )
 
-        prices = list(itertools.chain(*results))
+        prices: List[Pair] = []
+        for result in results:
+            if isinstance(result, Exception):
+                logging.getLogger("excthulhu").warning(
+                    f"Failed to fetch exchange prices: {result}"
+                )
+                continue
+            prices.extend(result)
+
         return prices
 
     async def fetch_exchange_prices(self, exchange_name: str) -> List[Pair]:
         if exchange_name not in self._cached_exchanges:
             exchange = self._exchanges[exchange_name]
-            prices = await exchange.fetch_prices()
+            try:
+                prices = await exchange.fetch_prices()
+            except Exception as exc:
+                logging.getLogger("excthulhu").warning(
+                    f"Failed to fetch {exchange_name}: {exc}"
+                )
+                return []
             if not self._cached:
                 return prices
 
@@ -120,9 +136,15 @@ class ExchangeManager:
                 )
                 return prices
 
-        with open(f"{self._cache_dir}/{exchange_name}.json") as file:
-            data = json.load(file)
-            return [
+        try:
+            with open(f"{self._cache_dir}/{exchange_name}.json") as file:
+                data = json.load(file)
+        except Exception as exc:
+            logging.getLogger("excthulhu").warning(
+                f"Failed to load cache for {exchange_name}: {exc}"
+            )
+            return []
+        return [
                 Pair(
                     currency_from=pair["currency_from"],
                     currency_to=pair["currency_to"],
