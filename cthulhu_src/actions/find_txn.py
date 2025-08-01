@@ -94,9 +94,16 @@ async def run(
     # Get index of current node
     current_node_id = None
     if current_node:
+        if current_node not in currency_list:
+            log.error(f"Current node {current_node} is not available in fetched data.")
+            return
         current_node_id = currency_list.index(current_node)
 
     log.info("Finish prepare data")
+
+    if start_node not in currency_list:
+        log.error(f"Start node {start_node} is not available in fetched data.")
+        return
 
     log.info("Start data processing...")
     if algorithm == "bellman-ford":
