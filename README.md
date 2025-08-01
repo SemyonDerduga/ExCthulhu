@@ -99,6 +99,24 @@ python -m cthulhu_src.main available-io <exchange>
 
 Результаты сохраняются в `~/.cache/cthulhu/available_io`.
 
+### Команда `forecast`
+
+Базовый прогноз цен на основе окна лог-доходностей. Поддерживает несколько методов предикта (mean, median, ema, arima).
+
+```bash
+python -m cthulhu_src.main forecast --prices 1,2,4,8 --horizons 1,5 --methods mean,arima
+```
+
+### Команда `forecast-backtest`
+
+Проверка, принесла бы прибыль сделка, совершённая в прошлом. По умолчанию
+используется временной сдвиг **120 минут**, но его можно задать вручную.
+
+```bash
+python -m cthulhu_src.main forecast-backtest --prices 1,2,4,8,16 --horizon 5 \
+    --minutes-back 180
+```
+
 ## Архитектура проекта
 
 ```
