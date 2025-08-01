@@ -70,6 +70,7 @@ exchange_list:
   - binance
   - hollaex
 ```
+```
 
 В формате JSON можно дополнительно указать список прокси:
 ```json
@@ -95,6 +96,27 @@ python -m cthulhu_src.main exchanges
 Получить перечень валют, доступных для ввода и вывода на конкретной бирже.
 ```bash
 python -m cthulhu_src.main available-io <exchange>
+```
+
+### Команда `predict`
+Эта команда использует логистическую регрессию по длине цепочки и потенциальной прибыли. При недостатке данных цепочки сортируются по коэффициенту прибыли.
+
+Поиск и ранжирование циклов с использованием простых ML‑методов.
+```bash
+python -m cthulhu_src.main predict -s <биржа_валюта> [опции]
+```
+
+### Команда `predict-advanced`
+Расширенный режим применяет случайный лес, анализируя также число уникальных бирж и валют и совпадение биржи начала и конца.
+
+Поиск и ранжирование циклов с использованием расширенных ML‑методов.
+```bash
+python -m cthulhu_src.main predict-advanced -s <биржа_валюта> [опции]
+```
+
+Пример:
+```bash
+python -m cthulhu_src.main predict-advanced -s binance_BTC -e binance -e hollaex
 ```
 
 Результаты сохраняются в `~/.cache/cthulhu/available_io`.
