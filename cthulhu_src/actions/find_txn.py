@@ -4,6 +4,8 @@ from pprint import pprint
 
 from cthulhu_src.services.exchange_manager import ExchangeManager
 from cthulhu_src.services.processor import find_paths
+from cthulhu_src.services.arbitrage import find_paths_bellman_ford
+from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 from cthulhu_src.services.cross_exchange_manager import get_free_transitions
 
 """
@@ -30,6 +32,10 @@ async def run(
     current_node=None,
     current_amount=None,
     cached=False,
+    algorithm="dfs",
+    processes=None,
+    prune_ratio=0.0,
+    batch_size=20,
     proxy=(),
 ):
     """
@@ -43,6 +49,10 @@ async def run(
     :param current_node:
     :param current_amount:
     :param cached:
+    :param algorithm:
+    :param processes:
+    :param prune_ratio:
+    :param batch_size:
     :param proxy:
     """
     log = logging.getLogger("excthulhu")
@@ -52,6 +62,7 @@ async def run(
 
     log.info("Start loading data...")
 
+    BatchingExchange.max_batch_size = batch_size
     exchange_manager = ExchangeManager(
         exchange_list, proxy, cached=cached, cache_dir=cache_dir
     )
@@ -88,14 +99,23 @@ async def run(
     log.info("Finish prepare data")
 
     log.info("Start data processing...")
-    paths = find_paths(
-        adj_list=adj_list,
-        start_node=currency_list.index(start_node),
-        start_amount=start_amount,
-        current_node=current_node_id,
-        current_amount=current_amount,
-        max_depth=max_depth,
-    )
+    if algorithm == "bellman-ford":
+        paths = find_paths_bellman_ford(
+            adj_list=adj_list,
+            start_node=currency_list.index(start_node),
+            start_amount=start_amount,
+        )
+    else:
+        paths = find_paths(
+            adj_list=adj_list,
+            start_node=currency_list.index(start_node),
+            start_amount=start_amount,
+            current_node=current_node_id,
+            current_amount=current_amount,
+            max_depth=max_depth,
+            prune_ratio=prune_ratio,
+            num_workers=processes,
+        )
     log.info("Finish data processing")
 
     # Sort result by profit
