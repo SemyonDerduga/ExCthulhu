@@ -13,6 +13,8 @@ from cthulhu_src.routes.config import config
 from cthulhu_src.routes.find_txn import find
 from cthulhu_src.routes.exchanges import exchanges
 from cthulhu_src.routes.available_io import available_io
+from cthulhu_src.routes.predict_txn import predict
+from cthulhu_src.routes.predict_advanced_txn import predict_advanced
 
 
 @click.group()
@@ -26,6 +28,8 @@ cli.add_command(find)
 cli.add_command(config)
 cli.add_command(exchanges)
 cli.add_command(available_io)
+cli.add_command(predict)
+cli.add_command(predict_advanced)
 
 
 def main():
