@@ -96,6 +96,9 @@ async def run(
     if current_node:
         if current_node not in currency_list:
             log.error(f"Current node {current_node} is not available in fetched data.")
+            log.error(
+                f"Current node {current_node} is not available in fetched data."
+            )
             return
         current_node_id = currency_list.index(current_node)
 
