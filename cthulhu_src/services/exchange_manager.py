@@ -144,16 +144,16 @@ class ExchangeManager:
             )
             return []
         return [
-                Pair(
-                    currency_from=pair["currency_from"],
-                    currency_to=pair["currency_to"],
-                    trade_book=[
-                        Order(
-                            price=order[0],
-                            amount=order[1],
-                        )
-                        for order in pair["trade_book"]
-                    ],
-                )
-                for pair in data
-            ]
+            Pair(
+                currency_from=pair["currency_from"],
+                currency_to=pair["currency_to"],
+                trade_book=[
+                    Order(
+                        price=order[0],
+                        amount=order[1],
+                    )
+                    for order in pair["trade_book"]
+                ],
+            )
+            for pair in data
+        ]

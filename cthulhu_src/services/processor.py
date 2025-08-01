@@ -9,6 +9,7 @@ from time import time
 
 from tqdm import tqdm
 
+from bisect import bisect_left
 from cthulhu_src.services.pair import AdjacencyList, NodeID, TradeBook
 
 logger = logging.getLogger("excthulhu")
@@ -24,24 +25,53 @@ class Task:
     current_amount: float  # amount at the moment when algorithm starts
 
     max_depth: int  # max depth to search
+    prune_ratio: float = 0.0  # branch pruning ratio
 
 
 Step = Tuple[NodeID, float]
 Path = List[Step]
 
 
+_cumulative_cache: dict[int, tuple[list[float], list[float]]] = {}
+_price_cache: dict[tuple[int, float], Optional[float]] = {}
+
+
 def calc_price(trading_amount: float, current_trade_book: TradeBook) -> Optional[float]:
-    target_currency_amount = 0
+    """Calculate resulting currency amount using binary search and caching."""
+    cache_key = (id(current_trade_book), trading_amount)
+    if cache_key in _price_cache:
+        return _price_cache[cache_key]
 
-    for order in current_trade_book:
-        if order.amount >= trading_amount:
-            target_currency_amount += trading_amount * order.price
-            return target_currency_amount
+    if not current_trade_book:
+        _price_cache[cache_key] = None
+        return None
 
-        trading_amount -= order.amount
-        target_currency_amount += order.amount * order.price
+    data = _cumulative_cache.get(id(current_trade_book))
+    if data is None:
+        amounts, costs = [], []
+        total_amount = 0.0
+        total_cost = 0.0
+        for order in current_trade_book:
+            total_amount += order.amount
+            total_cost += order.amount * order.price
+            amounts.append(total_amount)
+            costs.append(total_cost)
+        data = (amounts, costs)
+        _cumulative_cache[id(current_trade_book)] = data
 
-    return None
+    amounts, costs = data
+    if trading_amount > amounts[-1]:
+        _price_cache[cache_key] = None
+        return None
+
+    idx = bisect_left(amounts, trading_amount)
+    prev_amount = amounts[idx - 1] if idx > 0 else 0.0
+    prev_cost = costs[idx - 1] if idx > 0 else 0.0
+    remaining = trading_amount - prev_amount
+    result = prev_cost + remaining * current_trade_book[idx].price
+
+    _price_cache[cache_key] = result
+    return result
 
 
 def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
@@ -82,6 +112,11 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
                 next_price = calc_price(amount, trade_book)
                 if next_price is None:
                     continue
+                if (
+                    task.prune_ratio > 0
+                    and next_price <= task.start_amount * task.prune_ratio
+                ):
+                    continue
 
                 path.append((node, next_price))
                 seen.add(node)
@@ -98,8 +133,10 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
 
 
 @contextmanager
-def workers(*args, **kwargs):
-    processes = [Process(*args, **kwargs) for _ in range(os.cpu_count())]
+def workers(*args, num_workers: int = None, **kwargs):
+    if num_workers is None:
+        num_workers = os.cpu_count()
+    processes = [Process(*args, **kwargs) for _ in range(num_workers)]
 
     begin = time()
     for process in processes:
@@ -126,6 +163,8 @@ def find_paths(
     current_node: Optional[NodeID] = None,
     current_amount: Optional[int] = None,
     max_depth: int = 5,
+    prune_ratio: float = 0.0,
+    num_workers: int | None = None,
 ) -> List[Path]:
     if current_node is not None and current_amount is not None:
         worker_tasks = [
@@ -136,6 +175,7 @@ def find_paths(
                 start_amount=start_amount,
                 current_amount=current_amount,
                 max_depth=max_depth,
+                prune_ratio=prune_ratio,
             )
             for second_node in adj_list[current_node].keys()
         ]
@@ -148,6 +188,7 @@ def find_paths(
                 start_amount=start_amount,
                 current_amount=start_amount,
                 max_depth=max_depth,
+                prune_ratio=prune_ratio,
             )
             for second_node in adj_list[start_node].keys()
         ]
@@ -157,7 +198,11 @@ def find_paths(
         task_queue.put(task)
 
     result_queue = Queue()
-    with workers(target=worker, args=(adj_list, task_queue, result_queue)):
+    with workers(
+        target=worker,
+        args=(adj_list, task_queue, result_queue),
+        num_workers=num_workers,
+    ):
         results = [
             result_queue.get()
             for _ in tqdm(range(len(worker_tasks)), unit="task", dynamic_ncols=True)
