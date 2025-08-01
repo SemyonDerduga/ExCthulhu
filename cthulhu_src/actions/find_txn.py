@@ -83,11 +83,21 @@ async def run(
     # Get index of current node
     current_node_id = None
     if current_node:
+        if current_node not in currency_list:
+            log.error(
+                f"Current node {current_node} is not available in fetched data."
+            )
+            return
         current_node_id = currency_list.index(current_node)
 
     log.info("Finish prepare data")
 
     log.info("Start data processing...")
+    if start_node not in currency_list:
+        log.error(
+            f"Start node {start_node} is not available in fetched data."
+        )
+        return
     paths = find_paths(
         adj_list=adj_list,
         start_node=currency_list.index(start_node),
