@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Cthulhu - Интегрированный анализ{% endblock %}
+
+{% block page_title %}Интегрированный анализ арбитража и прогнозирования{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-cogs"></i>
+                    Параметры анализа
+                </h5>
+                
+                <form id="analysisForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="startNode" class="form-label">Стартовая валюта</label>
+                            <input type="text" class="form-control" id="startNode" value="binance_BTC" required>
+                            <div class="form-text">Формат: биржа_валюта (например: binance_BTC)</div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="amount" class="form-label">Количество</label>
+                            <input type="number" class="form-control" id="amount" value="1.0" step="0.001" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="maxDepth" class="form-label">Максимальная глубина</label>
+                            <input type="number" class="form-control" id="maxDepth" value="4" min="1" max="10">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="forecastMethod" class="form-label">Метод прогнозирования</label>
+                            <select class="form-select" id="forecastMethod">
+                                <option value="mean">Среднее значение</option>
+                                <option value="median">Медиана</option>
+                                <option value="ema">Экспоненциальное скользящее среднее</option>
+                                <option value="arima">ARIMA</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <label for="exchanges" class="form-label">Биржи</label>
+                            <select class="form-select" id="exchanges" multiple>
+                                <option value="binance" selected>Binance</option>
+                                <option value="yobit" selected>Yobit</option>
+                                <option value="hollaex">Hollaex</option>
+                                <option value="oceanex">Oceanex</option>
+                                <option value="poloniex">Poloniex</option>
+                                <option value="upbit">Upbit</option>
+                                <option value="exmo">Exmo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="historyHours" class="form-label">Часов истории</label>
+                            <input type="number" class="form-control" id="historyHours" value="24" min="1" max="168">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="forecastHorizon" class="form-label">Горизонт прогноза (мин)</label>
+                            <input type="number" class="form-control" id="forecastHorizon" value="5" min="1" max="60">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="lookback" class="form-label">Окно анализа</label>
+                            <input type="number" class="form-control" id="lookback" value="60" min="10" max="200">
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i>
+                                Запустить анализ
+                            </button>
+                            
+                            <div id="loading" class="loading mt-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border text-primary me-2" role="status">
+                                        <span class="visually-hidden">Загрузка...</span>
+                                    </div>
+                                    <span>Выполняется анализ...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- График исторических цен -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Исторические цены
+                </h5>
+                <div id="priceChart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- График прогнозов -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Прогнозы
+                </h5>
+                <div id="forecastChart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Результаты арбитража -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-exchange-alt"></i>
+                    Арбитражные возможности
+                </h5>
+                <div id="arbitrageResults">
+                    <p class="text-muted">Результаты появятся после анализа</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Статистика
+                </h5>
+                <div id="statistics">
+                    <p class="text-muted">Статистика появятся после анализа</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Показываем загрузку
+    showLoading('loading');
+    
+    try {
+        // Собираем данные формы
+        const formData = {
+            start_node: document.getElementById('startNode').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            max_depth: parseInt(document.getElementById('maxDepth').value),
+            exchanges: Array.from(document.getElementById('exchanges').selectedOptions).map(opt => opt.value),
+            auto_fetch_history: true,
+            history_hours: parseInt(document.getElementById('historyHours').value),
+            forecast_method: document.getElementById('forecastMethod').value,
+            forecast_horizon: parseInt(document.getElementById('forecastHorizon').value),
+            lookback: parseInt(document.getElementById('lookback').value)
+        };
+        
+        // Отправляем запрос
+        const response = await fetch('/api/forecast-arbitrage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Отображаем результаты
+        displayResults(data);
+        
+        showSuccess('Анализ завершен успешно!');
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showError('Ошибка при выполнении анализа: ' + error.message);
+    } finally {
+        hideLoading('loading');
+    }
+});
+
+function displayResults(data) {
+    // Отображаем график цен
+    if (data.historical_prices && data.historical_prices.length > 0) {
+        displayPriceChart(data.historical_prices);
+    }
+    
+    // Отображаем график прогнозов
+    if (data.forecast && data.forecast.forecasts) {
+        displayForecastChart(data.forecast);
+    }
+    
+    // Отображаем результаты арбитража
+    if (data.arbitrage && data.arbitrage.opportunities) {
+        displayArbitrageResults(data.arbitrage);
+    }
+    
+    // Отображаем статистику
+    displayStatistics(data);
+}
+
+function displayPriceChart(prices) {
+    const xValues = Array.from({length: prices.length}, (_, i) => i);
+    
+    const trace = {
+        x: xValues,
+        y: prices,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Цена',
+        line: {
+            color: '#667eea',
+            width: 2
+        },
+        marker: {
+            size: 4,
+            color: '#667eea'
+        }
+    };
+    
+    const layout = {
+        title: 'Исторические цены',
+        xaxis: {
+            title: 'Время'
+        },
+        yaxis: {
+            title: 'Цена'
+        },
+        height: 350
+    };
+    
+    Plotly.newPlot('priceChart', [trace], layout);
+}
+
+function displayForecastChart(forecastData) {
+    const prices = forecastData.prices;
+    const forecasts = forecastData.forecasts;
+    
+    const xValues = Array.from({length: prices.length}, (_, i) => i);
+    
+    // График исторических цен
+    const priceTrace = {
+        x: xValues,
+        y: prices,
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Исторические цены',
+        line: {
+            color: '#667eea',
+            width: 2
+        }
+    };
+    
+    // График прогноза
+    const forecastTrace = {
+        x: [xValues[xValues.length - 1], xValues[xValues.length - 1] + 1],
+        y: [prices[prices.length - 1], prices[prices.length - 1] * (1 + forecasts[0].mu / 100)],
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: `Прогноз (${forecasts[0].method})`,
+        line: {
+            color: '#ff6b6b',
+            width: 3,
+            dash: 'dash'
+        },
+        marker: {
+            size: 8,
+            color: '#ff6b6b'
+        }
+    };
+    
+    const layout = {
+        title: 'Прогноз движения цен',
+        xaxis: {
+            title: 'Время'
+        },
+        yaxis: {
+            title: 'Цена'
+        },
+        height: 350
+    };
+    
+    Plotly.newPlot('forecastChart', [priceTrace, forecastTrace], layout);
+}
+
+function displayArbitrageResults(arbitrageData) {
+    const container = document.getElementById('arbitrageResults');
+    
+    if (arbitrageData.opportunities.length === 0) {
+        container.innerHTML = '<p class="text-warning">Прибыльные возможности не найдены</p>';
+        return;
+    }
+    
+    let html = `<p><strong>Найдено возможностей:</strong> ${arbitrageData.total_found}</p>`;
+    html += '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>Путь</th><th>Прибыль %</th><th>Сумма</th></tr></thead><tbody>';
+    
+    arbitrageData.opportunities.slice(0, 5).forEach(opp => {
+        html += `<tr>
+            <td>${opp.path.join(' → ')}</td>
+            <td class="${opp.profit_percent > 0 ? 'text-success' : 'text-danger'}">${opp.profit_percent.toFixed(2)}%</td>
+            <td>${opp.final_amount.toFixed(6)}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function displayStatistics(data) {
+    const container = document.getElementById('statistics');
+    
+    let html = '<div class="row">';
+    
+    // Статистика арбитража
+    if (data.arbitrage) {
+        const opportunities = data.arbitrage.opportunities;
+        const profitableCount = opportunities.filter(opp => opp.profit_percent > 0).length;
+        const avgProfit = opportunities.length > 0 ? 
+            opportunities.reduce((sum, opp) => sum + opp.profit_percent, 0) / opportunities.length : 0;
+        
+        html += `
+        <div class="col-md-6">
+            <h6>Арбитраж</h6>
+            <ul class="list-unstyled">
+                <li>Всего возможностей: ${opportunities.length}</li>
+                <li>Прибыльных: ${profitableCount}</li>
+                <li>Средняя прибыль: ${avgProfit.toFixed(2)}%</li>
+            </ul>
+        </div>`;
+    }
+    
+    // Статистика прогнозирования
+    if (data.forecast) {
+        const forecast = data.forecast.forecasts[0];
+        html += `
+        <div class="col-md-6">
+            <h6>Прогнозирование</h6>
+            <ul class="list-unstyled">
+                <li>Метод: ${forecast.method}</li>
+                <li>Ожидаемое изменение: ${forecast.mu.toFixed(4)}%</li>
+                <li>Уверенность: ${(forecast.confidence * 100).toFixed(1)}%</li>
+                <li>Исторических точек: ${data.historical_prices ? data.historical_prices.length : 0}</li>
+            </ul>
+        </div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+</script>
+{% endblock %} 

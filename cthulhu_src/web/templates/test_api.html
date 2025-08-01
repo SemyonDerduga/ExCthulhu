@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Cthulhu - Тест API{% endblock %}
+
+{% block page_title %}Тест API{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-vial"></i>
+                    Тест API
+                </h5>
+                
+                <div class="mb-3">
+                    <button class="btn btn-primary" onclick="testExchanges()">
+                        <i class="fas fa-list"></i>
+                        Тест /api/exchanges
+                    </button>
+                    
+                    <button class="btn btn-success" onclick="testHistoricalData()">
+                        <i class="fas fa-history"></i>
+                        Тест /api/historical-data
+                    </button>
+                    
+                    <button class="btn btn-info" onclick="testForecast()">
+                        <i class="fas fa-chart-line"></i>
+                        Тест /api/forecast
+                    </button>
+                    
+                    <button class="btn btn-warning" onclick="testArbitrage()">
+                        <i class="fas fa-exchange-alt"></i>
+                        Тест /api/arbitrage
+                    </button>
+                    
+                    <button class="btn btn-danger" onclick="testForecastArbitrage()">
+                        <i class="fas fa-rocket"></i>
+                        Тест /api/forecast-arbitrage
+                    </button>
+                </div>
+                
+                <div id="results" class="mt-3">
+                    <h6>Результаты тестов:</h6>
+                    <pre id="apiResults" class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function testExchanges() {
+    try {
+        const response = await fetch('/api/exchanges');
+        const data = await response.json();
+        displayResult('GET /api/exchanges', data);
+    } catch (error) {
+        displayResult('GET /api/exchanges', { error: error.message });
+    }
+}
+
+async function testHistoricalData() {
+    try {
+        const response = await fetch('/api/historical-data/binance/BTC%2FUSDT?hours=1&format=prices');
+        const data = await response.json();
+        displayResult('GET /api/historical-data/binance/BTC/USDT', data);
+    } catch (error) {
+        displayResult('GET /api/historical-data/binance/BTC/USDT', { error: error.message });
+    }
+}
+
+async function testForecast() {
+    try {
+        const response = await fetch('/api/forecast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prices: [50000, 50100, 50200, 50300, 50400],
+                methods: ["mean"],
+                horizons: [5],
+                lookback: 60
+            })
+        });
+        const data = await response.json();
+        displayResult('POST /api/forecast', data);
+    } catch (error) {
+        displayResult('POST /api/forecast', { error: error.message });
+    }
+}
+
+async function testArbitrage() {
+    try {
+        const response = await fetch('/api/arbitrage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                start_node: "binance_BTC",
+                amount: 1.0,
+                max_depth: 3,
+                exchanges: ["binance", "yobit"],
+                algorithm: "dfs"
+            })
+        });
+        const data = await response.json();
+        displayResult('POST /api/arbitrage', data);
+    } catch (error) {
+        displayResult('POST /api/arbitrage', { error: error.message });
+    }
+}
+
+async function testForecastArbitrage() {
+    try {
+        const response = await fetch('/api/forecast-arbitrage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                start_node: "binance_BTC",
+                amount: 1.0,
+                max_depth: 3,
+                exchanges: ["binance", "yobit"],
+                auto_fetch_history: true,
+                history_hours: 1,
+                forecast_method: "mean",
+                forecast_horizon: 5,
+                lookback: 60
+            })
+        });
+        const data = await response.json();
+        displayResult('POST /api/forecast-arbitrage', data);
+    } catch (error) {
+        displayResult('POST /api/forecast-arbitrage', { error: error.message });
+    }
+}
+
+function displayResult(endpoint, data) {
+    const resultsDiv = document.getElementById('apiResults');
+    const timestamp = new Date().toLocaleTimeString();
+    const result = `[${timestamp}] ${endpoint}:\n${JSON.stringify(data, null, 2)}\n\n`;
+    resultsDiv.textContent += result;
+    resultsDiv.scrollTop = resultsDiv.scrollHeight;
+}
+</script>
+{% endblock %} 

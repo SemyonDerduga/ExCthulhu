@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Cthulhu - Главная{% endblock %}
+
+{% block page_title %}Добро пожаловать в Exchange Cthulhu{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                    Поиск арбитража
+                </h5>
+                <p class="card-text">
+                    Найдите прибыльные возможности для арбитража между различными биржами.
+                    Анализируйте курсы валют и находите выгодные сделки.
+                </p>
+                <a href="/arbitrage" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                    Начать поиск
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-bar text-success"></i>
+                    Прогнозирование
+                </h5>
+                <p class="card-text">
+                    Анализируйте исторические данные и делайте прогнозы движения цен.
+                    Используйте различные методы прогнозирования.
+                </p>
+                <a href="/forecast" class="btn btn-success">
+                    <i class="fas fa-chart-line"></i>
+                    Сделать прогноз
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-history text-info"></i>
+                    Исторические данные
+                </h5>
+                <p class="card-text">
+                    Получайте исторические данные с различных бирж.
+                    Анализируйте OHLCV данные и рыночную информацию.
+                </p>
+                <a href="/historical" class="btn btn-info">
+                    <i class="fas fa-download"></i>
+                    Получить данные
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-cogs text-warning"></i>
+                    Интегрированный анализ
+                </h5>
+                <p class="card-text">
+                    Объедините поиск арбитража с прогнозированием.
+                    Получите полный анализ с рекомендациями.
+                </p>
+                <a href="/integrated" class="btn btn-warning">
+                    <i class="fas fa-rocket"></i>
+                    Полный анализ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle text-secondary"></i>
+                    О проекте
+                </h5>
+                <p class="card-text">
+                    <strong>Exchange Cthulhu</strong> - это мощный инструмент для анализа криптовалютных рынков и поиска арбитражных возможностей.
+                    Проект объединяет в себе:
+                </p>
+                <ul>
+                    <li><strong>Поиск арбитража:</strong> Анализ курсов валют между различными биржами</li>
+                    <li><strong>Прогнозирование:</strong> Использование машинного обучения для предсказания движения цен</li>
+                    <li><strong>Визуализация:</strong> Интерактивные графики и дашборды</li>
+                    <li><strong>Автоматизация:</strong> Автоматическое получение данных с бирж</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

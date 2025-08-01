@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Cthulhu - Дашборд{% endblock %}
+
+{% block page_title %}Дашборд{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Статистика -->
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Поддерживаемые биржи</h6>
+                        <h3 id="exchangesCount">7</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exchange-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Методы прогнозирования</h6>
+                        <h3 id="forecastMethods">4</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Алгоритмы поиска</h6>
+                        <h3 id="algorithms">2</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Статус системы</h6>
+                        <h3 id="systemStatus">Онлайн</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Быстрый анализ -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-rocket"></i>
+                    Быстрый анализ
+                </h5>
+                
+                <form id="quickAnalysisForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="quickExchange" class="form-label">Биржа</label>
+                            <select class="form-select" id="quickExchange" required>
+                                <option value="">Выберите биржу...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="quickCurrency" class="form-label">Валюта</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." style="display: none;">
+                                <select class="form-select" id="quickCurrency" required>
+                                    <option value="">Сначала выберите биржу</option>
+                                </select>
+                                <div id="currencyLoading" class="input-group-text" style="display: none;">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Загрузка...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="quickAmount" class="form-label">Количество</label>
+                            <input type="number" class="form-control" id="quickAmount" value="1.0" step="0.001" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="quickMethod" class="form-label">Метод прогнозирования</label>
+                            <select class="form-select" id="quickMethod">
+                                <option value="mean">Среднее значение</option>
+                                <option value="median">Медиана</option>
+                                <option value="ema">EMA</option>
+                                <option value="arima">ARIMA</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i>
+                                Запустить быстрый анализ
+                            </button>
+                            
+                            <div id="quickLoading" class="loading mt-3">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" 
+                                         style="width: 0%" 
+                                         id="progressBar">0%</div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border text-primary me-2" role="status">
+                                        <span class="visually-hidden">Загрузка...</span>
+                                    </div>
+                                    <span id="loadingText">Подготовка к анализу...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="quickResults" class="mt-4" style="display: none;">
+                    <h6>Результаты быстрого анализа:</h6>
+                    <div id="quickResultsContent"></div>
+                    
+                    <!-- Детальные результаты -->
+                    <div id="detailedResults" class="mt-3" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-exchange-alt"></i>
+                                            Арбитражные возможности
+                                        </h6>
+                                        <div id="arbitrageDetails"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-chart-line"></i>
+                                            Прогноз
+                                        </h6>
+                                        <div id="forecastDetails"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Последние действия -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-history"></i>
+                    Последние действия
+                </h5>
+                
+                <div id="recentActions">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-search text-primary me-2"></i>
+                        <div>
+                            <small class="text-muted">2 минуты назад</small>
+                            <div>Поиск арбитража: binance_BTC</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-chart-line text-success me-2"></i>
+                        <div>
+                            <small class="text-muted">5 минут назад</small>
+                            <div>Прогноз: BTC/USDT (ARIMA)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-download text-info me-2"></i>
+                        <div>
+                            <small class="text-muted">10 минут назад</small>
+                            <div>Загрузка данных: Binance</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- График активности -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-area"></i>
+                    Активность системы
+                </h5>
+                <div id="activityChart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика бирж -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Статистика бирж
+                </h5>
+                <div id="exchangesChart" class="chart-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Загрузка бирж при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadExchanges();
+});
+
+// Загрузка списка бирж
+async function loadExchanges() {
+    try {
+        const response = await fetch('/api/exchanges');
+        const data = await response.json();
+        
+        const exchangeSelect = document.getElementById('quickExchange');
+        exchangeSelect.innerHTML = '<option value="">Выберите биржу...</option>';
+        
+        data.exchanges.forEach(exchange => {
+            const option = document.createElement('option');
+            option.value = exchange;
+            option.textContent = exchange.charAt(0).toUpperCase() + exchange.slice(1);
+            exchangeSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки бирж:', error);
+    }
+}
+
+// Загрузка валют при выборе биржи
+document.getElementById('quickExchange').addEventListener('change', async function() {
+    const exchange = this.value;
+    const currencySelect = document.getElementById('quickCurrency');
+    const currencySearch = document.getElementById('currencySearch');
+    
+    if (!exchange) {
+        currencySelect.innerHTML = '<option value="">Сначала выберите биржу</option>';
+        currencySearch.style.display = 'none';
+        return;
+    }
+    
+    try {
+        // Показываем индикатор загрузки
+        currencySelect.innerHTML = '<option value="">Загрузка валют...</option>';
+        document.getElementById('currencyLoading').style.display = 'block';
+        
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        
+        currencySelect.innerHTML = '<option value="">Выберите валюту...</option>';
+        
+        // Сохраняем все валюты для поиска
+        window.allCurrencies = data.currencies;
+        
+        data.currencies.forEach(currency => {
+            const option = document.createElement('option');
+            option.value = currency;
+            option.textContent = currency;
+            currencySelect.appendChild(option);
+        });
+        
+        // Показываем поле поиска если валют много
+        if (data.currencies.length > 10) {
+            currencySearch.style.display = 'block';
+            setupCurrencySearch();
+        }
+        
+        // Скрываем индикатор загрузки
+        document.getElementById('currencyLoading').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Ошибка загрузки валют:', error);
+        currencySelect.innerHTML = '<option value="">Ошибка загрузки валют</option>';
+        document.getElementById('currencyLoading').style.display = 'none';
+    }
+});
+
+// Настройка поиска валют
+function setupCurrencySearch() {
+    const currencySearch = document.getElementById('currencySearch');
+    const currencySelect = document.getElementById('quickCurrency');
+    
+    currencySearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const allCurrencies = window.allCurrencies || [];
+        
+        // Очищаем текущие опции
+        currencySelect.innerHTML = '<option value="">Выберите валюту...</option>';
+        
+        // Фильтруем валюты по поисковому запросу
+        const filteredCurrencies = allCurrencies.filter(currency => 
+            currency.toLowerCase().includes(searchTerm)
+        );
+        
+        // Добавляем отфильтрованные валюты
+        filteredCurrencies.forEach(currency => {
+            const option = document.createElement('option');
+            option.value = currency;
+            option.textContent = currency;
+            currencySelect.appendChild(option);
+        });
+    });
+}
+
+// Быстрый анализ
+document.getElementById('quickAnalysisForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const exchange = document.getElementById('quickExchange').value;
+    const currency = document.getElementById('quickCurrency').value;
+    
+    if (!exchange || !currency) {
+        showError('Пожалуйста, выберите биржу и валюту');
+        return;
+    }
+    
+            showLoading('quickLoading');
+        updateProgress(0, 'Подготовка к анализу...');
+        
+        try {
+            const formData = {
+                start_node: `${exchange}_${currency}`,
+                amount: parseFloat(document.getElementById('quickAmount').value),
+                max_depth: 4,
+                exchanges: [exchange, "yobit"],
+                auto_fetch_history: true,
+                history_hours: 24,
+                forecast_method: document.getElementById('quickMethod').value,
+                forecast_horizon: 5,
+                lookback: 60
+            };
+            
+            // Запускаем анализ
+            const response = await fetch('/api/forecast-arbitrage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Если есть task_id, подключаемся к потоку прогресса и ждем завершения
+            if (data.task_id) {
+                await monitorProgress(data.task_id);
+                
+                // Получаем результаты после завершения
+                const resultsResponse = await fetch(`/api/forecast-arbitrage-results/${data.task_id}`);
+                if (resultsResponse.ok) {
+                    const results = await resultsResponse.json();
+                    displayQuickResults(results);
+                    showSuccess('Быстрый анализ завершен!');
+                } else {
+                    throw new Error('Не удалось получить результаты анализа');
+                }
+            } else {
+                throw new Error('Не получен task_id от сервера');
+            }
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+            showError('Ошибка при выполнении анализа: ' + error.message);
+        } finally {
+            setTimeout(() => hideLoading('quickLoading'), 500);
+        }
+});
+
+function displayQuickResults(data) {
+    const container = document.getElementById('quickResults');
+    const content = document.getElementById('quickResultsContent');
+    const detailedResults = document.getElementById('detailedResults');
+    
+    let html = '<div class="row">';
+    
+    // Арбитраж
+    if (data.arbitrage && data.arbitrage.opportunities) {
+        const opportunities = data.arbitrage.opportunities;
+        const profitableCount = opportunities.filter(opp => opp.profit_percent > 0).length;
+        
+        html += `
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6>Арбитраж</h6>
+                    <p class="mb-1">Найдено: ${opportunities.length}</p>
+                    <p class="mb-1">Прибыльных: ${profitableCount}</p>
+                    ${opportunities.length > 0 ? `<p class="mb-0">Лучшая: ${opportunities[0].profit_percent.toFixed(2)}%</p>` : ''}
+                </div>
+            </div>
+        </div>`;
+        
+        // Детали арбитража
+        displayArbitrageDetails(opportunities);
+    }
+    
+    // Прогноз
+    if (data.forecast && data.forecast.forecasts) {
+        const forecast = data.forecast.forecasts[0];
+        
+        html += `
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6>Прогноз</h6>
+                    <p class="mb-1">Метод: ${forecast.method}</p>
+                    <p class="mb-1">Изменение: ${forecast.mu.toFixed(4)}%</p>
+                    <p class="mb-0">Уверенность: ${(forecast.confidence * 100).toFixed(1)}%</p>
+                </div>
+            </div>
+        </div>`;
+        
+        // Детали прогноза
+        displayForecastDetails(data.forecast);
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+    container.style.display = 'block';
+    detailedResults.style.display = 'block';
+}
+
+function displayArbitrageDetails(opportunities) {
+    const container = document.getElementById('arbitrageDetails');
+    
+    if (opportunities.length === 0) {
+        container.innerHTML = '<p class="text-warning">Прибыльные возможности не найдены</p>';
+        return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>Путь</th><th>Прибыль %</th><th>Сумма</th></tr></thead><tbody>';
+    
+    opportunities.slice(0, 10).forEach(opp => {
+        html += `<tr>
+            <td><code>${opp.path.join(' → ')}</code></td>
+            <td class="${opp.profit_percent > 0 ? 'text-success' : 'text-danger'}">
+                <strong>${opp.profit_percent.toFixed(2)}%</strong>
+            </td>
+            <td>${opp.final_amount.toFixed(6)}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function displayForecastDetails(forecastData) {
+    const container = document.getElementById('forecastDetails');
+    
+    if (!forecastData.forecasts || forecastData.forecasts.length === 0) {
+        container.innerHTML = '<p class="text-warning">Прогноз недоступен</p>';
+        return;
+    }
+    
+    const forecast = forecastData.forecasts[0];
+    let html = '<div class="list-group list-group-flush">';
+    
+    html += `
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <span>Метод:</span>
+                <strong>${forecast.method}</strong>
+            </div>
+        </div>
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <span>Ожидаемое изменение:</span>
+                <strong class="${forecast.mu > 0 ? 'text-success' : 'text-danger'}">${forecast.mu.toFixed(4)}%</strong>
+            </div>
+        </div>
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <span>Уверенность:</span>
+                <strong>${(forecast.confidence * 100).toFixed(1)}%</strong>
+            </div>
+        </div>
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <span>Стандартное отклонение:</span>
+                <strong>${forecast.sigma.toFixed(4)}</strong>
+            </div>
+        </div>
+    `;
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Функция для обновления прогресс-бара
+function updateProgress(percent, text) {
+    const progressBar = document.getElementById('progressBar');
+    const loadingText = document.getElementById('loadingText');
+    
+    if (progressBar) {
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = percent + '%';
+    }
+    
+    if (loadingText) {
+        loadingText.textContent = text;
+    }
+}
+
+// Функция для мониторинга прогресса через Server-Sent Events
+async function monitorProgress(taskId) {
+    return new Promise((resolve, reject) => {
+        console.log(`Подключаемся к SSE для задачи: ${taskId}`);
+        const eventSource = new EventSource(`/api/progress-stream/${taskId}`);
+        
+        eventSource.onopen = function(event) {
+            console.log('SSE соединение открыто');
+        };
+        
+        eventSource.onmessage = function(event) {
+            try {
+                console.log('Получено SSE сообщение:', event.data);
+                const data = JSON.parse(event.data);
+                
+                // Обновляем прогресс-бар
+                updateProgress(data.progress, data.message);
+                console.log(`Обновлен прогресс: ${data.progress}% - ${data.message}`);
+                
+                // Если задача завершена, закрываем соединение
+                if (data.completed || data.progress >= 100) {
+                    console.log('Задача завершена, закрываем SSE');
+                    eventSource.close();
+                    resolve();
+                }
+                
+            } catch (error) {
+                console.error('Ошибка парсинга прогресса:', error);
+                eventSource.close();
+                reject(error);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.error('Ошибка SSE:', error);
+            eventSource.close();
+            reject(error);
+        };
+        
+        // Таймаут на случай, если поток не завершится
+        setTimeout(() => {
+            console.log('SSE таймаут, закрываем соединение');
+            eventSource.close();
+            resolve();
+        }, 300000); // 5 минут
+    });
+}
+
+// Инициализация графиков при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // График активности
+    const activityTrace = {
+        x: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+        y: [10, 15, 25, 30, 35, 20],
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Запросы',
+        line: {
+            color: '#667eea',
+            width: 3
+        },
+        marker: {
+            size: 8,
+            color: '#667eea'
+        }
+    };
+    
+    const activityLayout = {
+        title: 'Активность за последние 24 часа',
+        xaxis: { title: 'Время' },
+        yaxis: { title: 'Количество запросов' },
+        height: 300
+    };
+    
+    Plotly.newPlot('activityChart', [activityTrace], activityLayout);
+    
+    // График бирж
+    const exchangesTrace = {
+        labels: ['Binance', 'Yobit', 'Hollaex', 'Oceanex', 'Poloniex', 'Upbit', 'Exmo'],
+        values: [35, 25, 15, 10, 8, 5, 2],
+        type: 'pie',
+        marker: {
+            colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b']
+        }
+    };
+    
+    const exchangesLayout = {
+        title: 'Распределение по биржам',
+        height: 300
+    };
+    
+    Plotly.newPlot('exchangesChart', [exchangesTrace], exchangesLayout);
+});
+</script>
+{% endblock %} 

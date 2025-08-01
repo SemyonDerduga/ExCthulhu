@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Арбитраж - ExCthulhu{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                    Поиск арбитража
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/">Главная</a></li>
+                        <li class="breadcrumb-item active">Арбитраж</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i>
+                        Настройки поиска
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="arbitrageForm">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="startCurrencyExchange" class="form-label">Биржа для стартовой валюты</label>
+                                <select class="form-select" id="startCurrencyExchange" onchange="loadCurrenciesForExchange()">
+                                    <option value="binance" selected>Binance</option>
+                                    <option value="yobit">Yobit</option>
+                                    <option value="hollaex">Hollaex</option>
+                                    <option value="oceanex">Oceanex</option>
+                                    <option value="poloniex">Poloniex</option>
+                                    <option value="upbit">Upbit</option>
+                                    <option value="exmo">Exmo</option>
+                                </select>
+                                
+                                <label for="startCurrency" class="form-label mt-2">Стартовая валюта</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." onkeyup="filterCurrencies()">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="loadAllCurrencies()">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                                <select class="form-select mt-2" id="startCurrency" required size="10">
+                                    <option value="">Выберите валюту...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="amount" class="form-label">Сумма</label>
+                                <input type="number" class="form-control" id="amount" value="1.0" min="0.1" step="0.1" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="maxDepth" class="form-label">Максимальная глубина</label>
+                                <select class="form-select" id="maxDepth">
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4" selected>4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="exchanges" class="form-label">Биржи</label>
+                                <select class="form-select" id="exchanges" multiple>
+                                    <option value="binance" selected>Binance</option>
+                                    <option value="yobit" selected>Yobit</option>
+                                    <option value="hollaex">Hollaex</option>
+                                    <option value="oceanex">Oceanex</option>
+                                    <option value="poloniex">Poloniex</option>
+                                    <option value="upbit">Upbit</option>
+                                    <option value="exmo">Exmo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="algorithm" class="form-label">Алгоритм</label>
+                                <select class="form-select" id="algorithm">
+                                    <option value="dfs" selected>DFS</option>
+                                    <option value="bfs">BFS</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-play"></i>
+                                    Начать поиск
+                                </button>
+                                
+                                <div id="arbitrageLoading" class="loading mt-3" style="display: none;">
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: 0%" 
+                                             id="arbitrageProgressBar">0%</div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border text-primary me-2" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                        <span id="arbitrageLoadingText">Подготовка к поиску...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        Статистика
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="arbitrageStats">
+                        <p class="text-muted">Запустите поиск для получения статистики</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        Результаты поиска
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="arbitrageResults">
+                        <p class="text-muted">Результаты появятся здесь после завершения поиска</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Загрузка валют при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrencies();
+});
+
+let allCurrencies = [];
+let currentExchange = 'binance';
+
+async function loadCurrencies() {
+    await loadAllCurrencies();
+}
+
+async function loadCurrenciesForExchange() {
+    const exchange = document.getElementById('startCurrencyExchange').value;
+    currentExchange = exchange;
+    await loadAllCurrencies();
+}
+
+async function loadAllCurrencies() {
+    try {
+        const exchange = document.getElementById('startCurrencyExchange').value;
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        
+        allCurrencies = data.currencies;
+        const select = document.getElementById('startCurrency');
+        
+        // Очищаем список
+        select.innerHTML = '<option value="">Выберите валюту...</option>';
+        
+        // Добавляем все валюты
+        allCurrencies.forEach(currency => {
+            const option = document.createElement('option');
+            option.value = `${exchange}_${currency}`;
+            option.textContent = currency;
+            select.appendChild(option);
+        });
+        
+        console.log(`Загружено ${allCurrencies.length} валют с биржи ${exchange}`);
+    } catch (error) {
+        console.error('Ошибка загрузки валют:', error);
+    }
+}
+
+function filterCurrencies() {
+    const searchTerm = document.getElementById('currencySearch').value.toLowerCase();
+    const select = document.getElementById('startCurrency');
+    const exchange = document.getElementById('startCurrencyExchange').value;
+    
+    // Очищаем список
+    select.innerHTML = '<option value="">Выберите валюту...</option>';
+    
+    // Фильтруем валюты
+    allCurrencies.forEach(currency => {
+        if (currency.toLowerCase().includes(searchTerm)) {
+            const option = document.createElement('option');
+            option.value = `${exchange}_${currency}`;
+            option.textContent = currency;
+            select.appendChild(option);
+        }
+    });
+}
+
+// Обработка формы арбитража
+document.getElementById('arbitrageForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const startCurrency = document.getElementById('startCurrency').value;
+    if (!startCurrency) {
+        showError('Пожалуйста, выберите стартовую валюту');
+        return;
+    }
+    
+    showLoading('arbitrageLoading');
+    updateArbitrageProgress(0, 'Подготовка к поиску...');
+    
+    try {
+        const exchanges = Array.from(document.getElementById('exchanges').selectedOptions).map(opt => opt.value);
+        
+        const formData = {
+            start_node: startCurrency,
+            amount: parseFloat(document.getElementById('amount').value),
+            max_depth: parseInt(document.getElementById('maxDepth').value),
+            exchanges: exchanges,
+            algorithm: document.getElementById('algorithm').value
+        };
+        
+        const response = await fetch('/api/arbitrage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Если есть task_id, подключаемся к потоку прогресса
+        if (data.task_id) {
+            await monitorArbitrageProgress(data.task_id);
+            
+            // Получаем результаты после завершения
+            const resultsResponse = await fetch(`/api/arbitrage-results/${data.task_id}`);
+            if (resultsResponse.ok) {
+                const results = await resultsResponse.json();
+                displayArbitrageResults(results);
+                showSuccess('Поиск арбитража завершен!');
+            } else {
+                throw new Error('Не удалось получить результаты анализа');
+            }
+        } else {
+            // Если нет task_id, используем данные напрямую
+            displayArbitrageResults(data);
+            showSuccess('Поиск арбитража завершен!');
+        }
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showError('Ошибка при выполнении поиска: ' + error.message);
+    } finally {
+        setTimeout(() => hideLoading('arbitrageLoading'), 500);
+    }
+});
+
+function updateArbitrageProgress(percent, text) {
+    const progressBar = document.getElementById('arbitrageProgressBar');
+    const loadingText = document.getElementById('arbitrageLoadingText');
+    
+    if (progressBar) {
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = percent + '%';
+    }
+    
+    if (loadingText) {
+        loadingText.textContent = text;
+    }
+}
+
+// Функция для мониторинга прогресса арбитража через Server-Sent Events
+async function monitorArbitrageProgress(taskId) {
+    return new Promise((resolve, reject) => {
+        console.log(`Подключаемся к SSE для задачи арбитража: ${taskId}`);
+        const eventSource = new EventSource(`/api/progress-stream/${taskId}`);
+        
+        eventSource.onopen = function(event) {
+            console.log('SSE соединение для арбитража открыто');
+        };
+        
+        eventSource.onmessage = function(event) {
+            try {
+                console.log('Получено SSE сообщение для арбитража:', event.data);
+                const data = JSON.parse(event.data);
+                
+                // Обновляем прогресс-бар
+                updateArbitrageProgress(data.progress, data.message);
+                console.log(`Обновлен прогресс арбитража: ${data.progress}% - ${data.message}`);
+                
+                // Если задача завершена, закрываем соединение
+                if (data.completed || data.progress >= 100) {
+                    console.log('Задача арбитража завершена, закрываем SSE');
+                    eventSource.close();
+                    resolve();
+                }
+                
+            } catch (error) {
+                console.error('Ошибка парсинга прогресса арбитража:', error);
+                eventSource.close();
+                reject(error);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.error('Ошибка SSE для арбитража:', error);
+            eventSource.close();
+            reject(error);
+        };
+        
+        // Таймаут на случай, если поток не завершится
+        setTimeout(() => {
+            console.log('SSE таймаут для арбитража, закрываем соединение');
+            eventSource.close();
+            resolve();
+        }, 300000); // 5 минут
+    });
+}
+
+function displayArbitrageResults(data) {
+    const container = document.getElementById('arbitrageResults');
+    const statsContainer = document.getElementById('arbitrageStats');
+    
+    if (!data.opportunities || data.opportunities.length === 0) {
+        container.innerHTML = '<p class="text-muted">Арбитражные возможности не найдены</p>';
+        statsContainer.innerHTML = '<p class="text-muted">Нет данных для отображения</p>';
+        return;
+    }
+    
+    // Статистика
+    const opportunities = data.opportunities;
+    const profitableCount = opportunities.filter(opp => opp.profit_percent > 0).length;
+    const bestProfit = Math.max(...opportunities.map(opp => opp.profit_percent));
+    
+    statsContainer.innerHTML = `
+        <div class="row text-center">
+            <div class="col-6">
+                <h4 class="text-primary">${opportunities.length}</h4>
+                <small class="text-muted">Всего путей</small>
+            </div>
+            <div class="col-6">
+                <h4 class="text-success">${profitableCount}</h4>
+                <small class="text-muted">Прибыльных</small>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <h5 class="text-success">${bestProfit.toFixed(2)}%</h5>
+            <small class="text-muted">Лучшая прибыль</small>
+        </div>
+    `;
+    
+    // Результаты
+    let html = '<div class="table-responsive"><table class="table table-hover">';
+    html += '<thead><tr><th>Путь</th><th>Прибыль</th><th>Сумма</th></tr></thead><tbody>';
+    
+    opportunities.slice(0, 10).forEach(opp => {
+        const profitClass = opp.profit_percent > 0 ? 'text-success' : 'text-danger';
+        html += `
+            <tr>
+                <td><code>${opp.path.join(' → ')}</code></td>
+                <td class="${profitClass}">${opp.profit_percent.toFixed(2)}%</td>
+                <td>${opp.final_amount.toFixed(4)}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    
+    if (opportunities.length > 10) {
+        html += `<p class="text-muted">Показано ${10} из ${opportunities.length} результатов</p>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+function showLoading(elementId) {
+    document.getElementById(elementId).style.display = 'block';
+}
+
+function hideLoading(elementId) {
+    document.getElementById(elementId).style.display = 'none';
+}
+
+function showSuccess(message) {
+    // Простая реализация уведомления
+    alert('✅ ' + message);
+}
+
+function showError(message) {
+    // Простая реализация уведомления
+    alert('❌ ' + message);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Исторические данные - ExCthulhu{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-history text-primary"></i>
+                    Исторические данные
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/">Главная</a></li>
+                        <li class="breadcrumb-item active">Исторические данные</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i>
+                        Параметры запроса
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="historicalForm">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="historicalExchange" class="form-label">Биржа</label>
+                                <select class="form-select" id="historicalExchange" required>
+                                    <option value="">Выберите биржу...</option>
+                                    <option value="binance">Binance</option>
+                                    <option value="yobit">Yobit</option>
+                                    <option value="hollaex">Hollaex</option>
+                                    <option value="oceanex">Oceanex</option>
+                                    <option value="poloniex">Poloniex</option>
+                                    <option value="upbit">Upbit</option>
+                                    <option value="exmo">Exmo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="historicalSymbol" class="form-label">Торговая пара</label>
+                                <input type="text" class="form-control" id="historicalSymbol" placeholder="BTC/USDT" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="historicalHours" class="form-label">Часов истории</label>
+                                <input type="number" class="form-control" id="historicalHours" value="24" min="1" max="168" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="historicalFormat" class="form-label">Формат данных</label>
+                                <select class="form-select" id="historicalFormat">
+                                    <option value="prices" selected>Только цены</option>
+                                    <option value="ohlcv">OHLCV</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="historicalSymbolHelp" class="form-label">Примеры торговых пар</label>
+                                <div class="form-text">
+                                    BTC/USDT, ETH/USDT, ADA/BTC, SOL/USDT
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-download"></i>
+                                    Загрузить данные
+                                </button>
+                                
+                                <div id="historicalLoading" class="loading mt-3" style="display: none;">
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: 0%" 
+                                             id="historicalProgressBar">0%</div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border text-primary me-2" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                        <span id="historicalLoadingText">Загрузка исторических данных...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        Статистика данных
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="historicalStats">
+                        <p class="text-muted">Загрузите данные для получения статистики</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        График исторических данных
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="historicalChart">
+                        <p class="text-muted">График появится после загрузки данных</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Обработка формы исторических данных
+document.getElementById('historicalForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const exchange = document.getElementById('historicalExchange').value;
+    const symbol = document.getElementById('historicalSymbol').value;
+    
+    if (!exchange || !symbol) {
+        showError('Пожалуйста, заполните все обязательные поля');
+        return;
+    }
+    
+    showLoading('historicalLoading');
+    updateHistoricalProgress(0, 'Загрузка исторических данных...');
+    
+    try {
+        const hours = document.getElementById('historicalHours').value;
+        const format = document.getElementById('historicalFormat').value;
+        
+        const response = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${hours}&format=${format}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        updateHistoricalProgress(100, 'Данные загружены');
+        
+        displayHistoricalData(data, symbol);
+        showSuccess('Исторические данные успешно загружены!');
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showError('Ошибка при загрузке данных: ' + error.message);
+    } finally {
+        setTimeout(() => hideLoading('historicalLoading'), 500);
+    }
+});
+
+function updateHistoricalProgress(percent, text) {
+    const progressBar = document.getElementById('historicalProgressBar');
+    const loadingText = document.getElementById('historicalLoadingText');
+    
+    if (progressBar) {
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = percent + '%';
+    }
+    
+    if (loadingText) {
+        loadingText.textContent = text;
+    }
+}
+
+function displayHistoricalData(data, symbol) {
+    const statsContainer = document.getElementById('historicalStats');
+    const chartContainer = document.getElementById('historicalChart');
+    
+    if (!data.prices || data.prices.length === 0) {
+        statsContainer.innerHTML = '<p class="text-muted">Нет данных для отображения</p>';
+        chartContainer.innerHTML = '<p class="text-muted">Нет данных для графика</p>';
+        return;
+    }
+    
+    const prices = data.prices;
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+    const priceChange = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
+    
+    // Статистика
+    statsContainer.innerHTML = `
+        <div class="row text-center">
+            <div class="col-6">
+                <h4 class="text-primary">${prices.length}</h4>
+                <small class="text-muted">Точек данных</small>
+            </div>
+            <div class="col-6">
+                <h4 class="${priceChange > 0 ? 'text-success' : 'text-danger'}">${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%</h4>
+                <small class="text-muted">Изменение</small>
+            </div>
+        </div>
+        <hr>
+        <div class="row text-center">
+            <div class="col-4">
+                <h6 class="text-info">${minPrice.toFixed(4)}</h6>
+                <small class="text-muted">Мин</small>
+            </div>
+            <div class="col-4">
+                <h6 class="text-success">${avgPrice.toFixed(4)}</h6>
+                <small class="text-muted">Среднее</small>
+            </div>
+            <div class="col-4">
+                <h6 class="text-warning">${maxPrice.toFixed(4)}</h6>
+                <small class="text-muted">Макс</small>
+            </div>
+        </div>
+    `;
+    
+    // График
+    const timestamps = Array.from({length: prices.length}, (_, i) => i);
+    
+    const trace = {
+        x: timestamps,
+        y: prices,
+        type: 'scatter',
+        mode: 'lines',
+        name: symbol,
+        line: {
+            color: '#667eea',
+            width: 2
+        }
+    };
+    
+    const layout = {
+        title: `Исторические данные: ${symbol}`,
+        xaxis: { 
+            title: 'Время',
+            showgrid: true,
+            gridcolor: '#f0f0f0'
+        },
+        yaxis: { 
+            title: 'Цена',
+            showgrid: true,
+            gridcolor: '#f0f0f0'
+        },
+        height: 400,
+        margin: { t: 50, b: 50, l: 50, r: 50 }
+    };
+    
+    Plotly.newPlot(chartContainer, [trace], layout);
+}
+
+function showLoading(elementId) {
+    document.getElementById(elementId).style.display = 'block';
+}
+
+function hideLoading(elementId) {
+    document.getElementById(elementId).style.display = 'none';
+}
+
+function showSuccess(message) {
+    alert('✅ ' + message);
+}
+
+function showError(message) {
+    alert('❌ ' + message);
+}
+</script>
+{% endblock %} 
