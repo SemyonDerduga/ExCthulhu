@@ -1,7 +1,11 @@
+"""Exmo exchange adapter."""
+
 from cthulhu_src.services.exchanges.batching_exchange import BatchingExchange
 
 
 class Exmo(BatchingExchange):
+    """Exchange adapter for Exmo."""
+
     name = "exmo"
     opts = {
         "enableRateLimit": True,

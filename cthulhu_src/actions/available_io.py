@@ -1,3 +1,5 @@
+"""Retrieve currencies available for deposits and withdrawals."""
+
 import os
 import json
 
@@ -5,6 +7,7 @@ import ccxt
 import logging
 import hmac
 import hashlib
+from tqdm import tqdm
 from pathlib import Path
 from os.path import expanduser
 import urllib.parse
@@ -15,9 +18,11 @@ API_SECRET = b"7d1baac2ff2c66134b70ad6745aa6106"
 AVAILABLE_IO_DIR = expanduser("~/.cache/cthulhu/available_io")
 
 
-def run(cxt, exchange):
+def run(cxt, exchange: str) -> None:
+    """Fetch list of currencies available for deposits and withdrawals."""
+
     log = logging.getLogger("excthulhu")
-    log.info(f"Start getting available i/o value for {exchange}...")
+    log.info(f"🚀 Start getting available i/o value for {exchange}...")
 
     available_cur = []
     not_available = []
@@ -85,12 +90,14 @@ def run(cxt, exchange):
             values.append(market["symbol"].split("/")[1])
         values = set(values)
 
-        log.info(f"Всего валют {len(values)}")
+        log.info(f"🔢 Всего валют {len(values)}")
 
-        for value in values:
+        for value in tqdm(
+            values, desc="🔄 Fetching wallets", unit="coin", dynamic_ncols=True
+        ):
             print(value)
             try:
-                log.info(f"Получаем кошель для пополнения ({value})")
+                log.info(f"💰 Получаем кошель для пополнения ({value})")
                 resp = call_api(method="GetDepositAddress", coinName=value)
                 if not resp["return"]["status"] == "maintenance":
                     available_cur.append(value)
@@ -99,8 +106,8 @@ def run(cxt, exchange):
                 not_available.append(value)
 
         available = [f"{exchange}_{currency}" for currency in list(set(available_cur))]
-        log.info(f"Всего доступных для ввода валют {len(available)}")
-        log.info(f"Всего недоступных для ввода валют {len(not_available)}")
+        log.info(f"📥 Всего доступных для ввода валют {len(available)}")
+        log.info(f"📤 Всего недоступных для ввода валют {len(not_available)}")
     else:
 
         exchanges_instances = {
@@ -122,7 +129,7 @@ def run(cxt, exchange):
             values.append(market["symbol"].split("/")[1])
         available = [f"{exchange}_{currency}" for currency in list(set(values))]
 
-    log.info(f"Save avalible currency list for exchange {exchange}")
+    log.info(f"💾 Save avalible currency list for exchange {exchange}")
     cache_dir_path = Path(os.path.expanduser(AVAILABLE_IO_DIR))
     cache_dir_path.mkdir(parents=True, exist_ok=True)
 
