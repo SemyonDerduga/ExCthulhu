@@ -1,9 +1,11 @@
+"""Management layer for fetching data from multiple exchanges."""
+
 import asyncio
 import json
 import os
 import logging
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List, Sequence
 
 from cthulhu_src.services.exchanges import (
     BaseExchange,
@@ -33,11 +35,12 @@ exchanges_instances = {
 }
 
 
-def get_exchange_by_name(exchange_name, proxies):
+def get_exchange_by_name(exchange_name: str, proxies: Sequence[str]) -> BaseExchange:
+    """Instantiate exchange class by name."""
+
     if exchange_name in exchanges_instances:
         return exchanges_instances[exchange_name](proxies)
-    else:
-        return GenericExchange(exchange_name, proxies)
+    return GenericExchange(exchange_name, proxies)
 
 
 class ExchangeManager:
@@ -48,18 +51,12 @@ class ExchangeManager:
     def __init__(
         self,
         exchanges: List[str],
-        proxies=(),
-        cached=False,
-        cache_dir="~/.cache/cthulhu",
+        proxies: Sequence[str] = (),
+        cached: bool = False,
+        cache_dir: str = "~/.cache/cthulhu",
     ):
-        """
-        Creates cache directory
-        Creates list of cached exchanges
-        Inits list of not cached exchange instances.
+        """Initialize manager and prepare cache if needed."""
 
-        :param exchanges: list of exchanges
-        :param proxies:
-        """
         self._cached = cached
         self._exchange_names = exchanges
         self._cached_exchanges = []
@@ -82,11 +79,13 @@ class ExchangeManager:
         }
 
     async def close(self):
+        """Close all active exchange connections."""
         await asyncio.gather(
             *[exchange.close() for exchange in self._exchanges.values()]
         )
 
     async def fetch_prices(self) -> List[Pair]:
+        """Fetch prices for all configured exchanges."""
         results = await asyncio.gather(
             *[
                 self.fetch_exchange_prices(exchange_name)
@@ -99,7 +98,7 @@ class ExchangeManager:
         for result in results:
             if isinstance(result, Exception):
                 logging.getLogger("excthulhu").warning(
-                    f"Failed to fetch exchange prices: {result}"
+                    f"⚠️ Failed to fetch exchange prices: {result}"
                 )
                 continue
             prices.extend(result)
@@ -107,13 +106,14 @@ class ExchangeManager:
         return prices
 
     async def fetch_exchange_prices(self, exchange_name: str) -> List[Pair]:
+        """Fetch and optionally cache prices for a single exchange."""
         if exchange_name not in self._cached_exchanges:
             exchange = self._exchanges[exchange_name]
             try:
                 prices = await exchange.fetch_prices()
             except Exception as exc:
                 logging.getLogger("excthulhu").warning(
-                    f"Failed to fetch {exchange_name}: {exc}"
+                    f"⚠️ Failed to fetch {exchange_name}: {exc}"
                 )
                 return []
             if not self._cached:
@@ -140,7 +140,7 @@ class ExchangeManager:
                 data = json.load(file)
         except Exception as exc:
             logging.getLogger("excthulhu").warning(
-                f"Failed to load cache for {exchange_name}: {exc}"
+                f"⚠️ Failed to load cache for {exchange_name}: {exc}"
             )
             return []
         return [

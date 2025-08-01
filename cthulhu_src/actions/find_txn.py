@@ -14,6 +14,8 @@ from cthulhu_src.services.cross_exchange_manager import get_free_transitions
 
 
 def get_order_path_history(path, adj_list):
+    """Return order book sequence for a given currency path."""
+
     orders_list = []
 
     for i in range(len(path) - 1):
@@ -24,43 +26,27 @@ def get_order_path_history(path, adj_list):
 
 async def run(
     ctx,
-    max_depth,
-    exchange_list,
-    start_node,
-    start_amount,
-    cache_dir,
-    current_node=None,
-    current_amount=None,
-    cached=False,
-    algorithm="dfs",
-    processes=None,
-    prune_ratio=0.0,
-    batch_size=20,
-    proxy=(),
+    max_depth: int,
+    exchange_list: list,
+    start_node: str,
+    start_amount: float,
+    cache_dir: str,
+    current_node: str | None = None,
+    current_amount: float | None = None,
+    cached: bool = False,
+    algorithm: str = "dfs",
+    processes: int | None = None,
+    prune_ratio: float = 0.0,
+    batch_size: int = 20,
+    proxy: tuple | list = (),
 ):
-    """
-
-    :param ctx:
-    :param max_depth:
-    :param exchange_list:
-    :param start_node:
-    :param start_amount:
-    :param cache_dir:
-    :param current_node:
-    :param current_amount:
-    :param cached:
-    :param algorithm:
-    :param processes:
-    :param prune_ratio:
-    :param batch_size:
-    :param proxy:
-    """
+    """Run full pipeline for searching profitable transaction cycles."""
     log = logging.getLogger("excthulhu")
     log.info(
-        f'Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}'
+        f'🔍 Start finding transactions with max depth {max_depth} for exchanges: {", ".join(exchange_list)}'
     )
 
-    log.info("Start loading data...")
+    log.info("⬇️ Start loading data...")
 
     BatchingExchange.max_batch_size = batch_size
     exchange_manager = ExchangeManager(
@@ -73,9 +59,9 @@ async def run(
 
     pairs += get_free_transitions(exchange_list)
 
-    log.info("Finish loading")
+    log.info("✅ Finish loading")
 
-    log.info("Start prepare data...")
+    log.info("⚙️ Start prepare data...")
 
     adj_dict = defaultdict(list)
     for pair in pairs:
@@ -95,20 +81,22 @@ async def run(
     current_node_id = None
     if current_node:
         if current_node not in currency_list:
-            log.error(f"Current node {current_node} is not available in fetched data.")
             log.error(
-                f"Current node {current_node} is not available in fetched data."
+                f"❌ Current node {current_node} is not available in fetched data."
+            )
+            log.error(
+                f"❌ Current node {current_node} is not available in fetched data."
             )
             return
         current_node_id = currency_list.index(current_node)
 
-    log.info("Finish prepare data")
+    log.info("✅ Finish prepare data")
 
     if start_node not in currency_list:
-        log.error(f"Start node {start_node} is not available in fetched data.")
+        log.error(f"❌ Start node {start_node} is not available in fetched data.")
         return
 
-    log.info("Start data processing...")
+    log.info("🔄 Start data processing...")
     if algorithm == "bellman-ford":
         paths = find_paths_bellman_ford(
             adj_list=adj_list,
@@ -126,7 +114,7 @@ async def run(
             prune_ratio=prune_ratio,
             num_workers=processes,
         )
-    log.info("Finish data processing")
+    log.info("✅ Finish data processing")
 
     # Sort result by profit
     paths.sort(key=lambda x: x[-1][1])
@@ -144,4 +132,4 @@ async def run(
             pprint(orders)
             print("=" * 80)
 
-    log.info(f"Total count of winning cycles:{len(result)}")
+    log.info(f"🏆 Total count of winning cycles:{len(result)}")

@@ -10,6 +10,8 @@ from .processor import calc_price, Path
 
 
 def _build_edges(adj_list: AdjacencyList) -> List[tuple[int, int, float]]:
+    """Convert adjacency list to weighted edges for Bellman-Ford."""
+
     edges: List[tuple[int, int, float]] = []
     for u, neighbours in enumerate(adj_list):
         for v, book in neighbours.items():

@@ -54,7 +54,7 @@ def find(
     processes,
     prune_ratio,
     batch_size,
-):
+) -> None:
     """
     Find winning transaction and print it.
     """

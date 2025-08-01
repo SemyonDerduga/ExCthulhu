@@ -1,6 +1,10 @@
+"""Base classes for exchange implementations."""
+
 import asyncio
 import logging
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Sequence
+
+from tqdm import tqdm
 from aiohttp import ClientSession
 import ccxt.async_support as ccxt
 from aiohttp_proxy import ProxyConnector
@@ -9,6 +13,8 @@ from cthulhu_src.services.pair import Pair, Order
 
 
 class BaseExchange:
+    """Base interface for all exchange adapters."""
+
     currency_blacklist = []
     opts = {
         "enableRateLimit": True,
@@ -19,7 +25,9 @@ class BaseExchange:
     fee = 0
     log = logging.getLogger("excthulhu")
 
-    def __init__(self, proxies=()):
+    def __init__(self, proxies: Sequence[str] = ()) -> None:
+        """Create exchange instance with optional proxy rotation."""
+
         exchange_class = getattr(ccxt, self.name)
 
         self._sessions = []
@@ -44,7 +52,9 @@ class BaseExchange:
             await session.close()
         await self._instance.close()
 
-    def _with_proxy(self):
+    def _with_proxy(self) -> ccxt.Exchange:
+        """Return ccxt instance bound to the next proxy session."""
+
         api = self._instance
         if len(self._sessions) > 0:
             api.session = self._sessions[self._session_index]
@@ -53,6 +63,8 @@ class BaseExchange:
         return api
 
     async def state_preparation(self, symbol: str) -> List[Pair]:
+        """Return two directed currency pairs for ``symbol`` order book."""
+
         result: Dict[
             str,
             Tuple[float, float],
@@ -71,7 +83,7 @@ class BaseExchange:
             return []
 
         pair = symbol.split("/")
-        self.log.debug(f"{self.name}_{pair[0]} - {self.name}_{pair[1]}")
+        self.log.debug(f"🔗 {self.name}_{pair[0]} - {self.name}_{pair[1]}")
         return [
             Pair(
                 currency_from=f"{self.name}_{pair[0]}",
@@ -86,17 +98,19 @@ class BaseExchange:
         ]
 
     async def fetch_prices(self) -> List[Pair]:
+        """Return currency pairs fetched from the exchange."""
+
         try:
             markets = await self._with_proxy().fetch_markets()
         except Exception as exc:  # network errors, timeouts, etc.
-            self.log.warning(f"Failed to fetch markets: {exc}")
+            self.log.warning(f"⚠️ Failed to fetch markets: {exc}")
             return []
 
         symbols = [market["symbol"] for market in markets]
 
         currency = set([cur for cur_pair in symbols for cur in cur_pair.split("/")])
 
-        self.log.info(f"Received {len(currency)} сurrency.")
+        self.log.info(f"💱 Received {len(currency)} currency types.")
 
         pairs: List[Pair] = []
 
@@ -104,22 +118,29 @@ class BaseExchange:
             try:
                 return await self.state_preparation(symbol)
             except Exception as exc:
-                self.log.warning(f"Failed to fetch {symbol}: {exc}")
+                self.log.warning(f"⚠️ Failed to fetch {symbol}: {exc}")
                 return []
 
         batch_size = self.max_concurrent_requests
-        for i in range(0, len(symbols), batch_size):
+        for i in tqdm(
+            range(0, len(symbols), batch_size),
+            desc="📈 Fetching books",
+            unit="batch",
+            dynamic_ncols=True,
+        ):
             batch = symbols[i : i + batch_size]
             self.log.debug(
-                f"Processing symbols {i+1}-{min(i+batch_size, len(symbols))} of {len(symbols)}"
+                f"🔄 Processing symbols {i+1}-{min(i+batch_size, len(symbols))} of {len(symbols)}"
             )
             results = await asyncio.gather(*[fetch(symbol) for symbol in batch])
             for pairs_batch in results:
                 pairs.extend([p for p in pairs_batch if len(p.trade_book) > 0])
 
-        self.log.info(f"Received {len(pairs)} сurrency pairs exchange prices.")
+        self.log.info(f"📊 Received {len(pairs)} currency pairs exchange prices.")
         return pairs
 
     @classmethod
     def calc_fee(cls, amount: float) -> float:
+        """Return ``amount`` including exchange trading fee."""
+
         return amount * (1.0 + cls.fee)

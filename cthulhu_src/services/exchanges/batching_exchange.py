@@ -1,14 +1,21 @@
-import asyncio
+"""Exchange adapter using batch requests for order books."""
+
 from typing import Tuple, Dict, List
+
+from tqdm import tqdm
 
 from cthulhu_src.services.exchanges.base_exchange import BaseExchange
 from cthulhu_src.services.pair import Pair, Order
 
 
 class BatchingExchange(BaseExchange):
+    """Exchange that fetches order books in batches."""
+
     max_batch_size = 20
 
     async def state_preparation(self, symbols: List[str]) -> List[Pair]:
+        """Fetch order books for ``symbols`` and build pair objects."""
+
         markets: Dict[
             str,
             Dict[
@@ -32,7 +39,7 @@ class BatchingExchange(BaseExchange):
 
             currency_pair = symbol.split("/")
             self.log.debug(
-                f"{self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}"
+                f"🔗 {self.name}_{currency_pair[0]} - {self.name}_{currency_pair[1]}"
             )
             results.append(
                 Pair(
@@ -52,30 +59,34 @@ class BatchingExchange(BaseExchange):
         return results
 
     async def fetch_prices(self) -> List[Pair]:
+        """Collect prices for all markets using batch requests."""
+
         try:
             markets = await self._with_proxy().fetch_markets()
         except Exception as exc:
-            self.log.warning(f"Failed to fetch markets: {exc}")
+            self.log.warning(f"⚠️ Failed to fetch markets: {exc}")
             return []
         symbols: [str] = [market["symbol"] for market in markets]
 
         currency = set([cur for cur_pair in symbols for cur in cur_pair.split("/")])
 
-        self.log.info(f"Received {len(currency)} сurrency.")
+        self.log.info(f"💱 Received {len(currency)} currency types.")
 
         batches: List[List[str]] = [
             symbols[i : i + self.max_batch_size]
             for i in range(0, len(symbols), self.max_batch_size)
         ]
 
-        promises = [self.state_preparation(batch_symbols) for batch_symbols in batches]
+        pairs: List[Pair] = []
+        for batch_symbols in tqdm(
+            batches,
+            desc="📈 Fetching books",
+            unit="batch",
+            dynamic_ncols=True,
+        ):
+            for pair in await self.state_preparation(batch_symbols):
+                if len(pair.trade_book) > 0:
+                    pairs.append(pair)
 
-        pairs: List[Pair] = [
-            pair
-            for pairs in await asyncio.gather(*promises)
-            for pair in pairs
-            if len(pair.trade_book) > 0
-        ]
-
-        self.log.info(f"Received {len(pairs)} сurrency pairs exchange prices.")
+        self.log.info(f"📊 Received {len(pairs)} currency pairs exchange prices.")
         return pairs

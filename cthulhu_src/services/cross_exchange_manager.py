@@ -1,12 +1,18 @@
+"""Utilities for working with cross-exchange currency transfers."""
+
 import os
 import math
 from os.path import expanduser
+from typing import List
+
 from cthulhu_src.services.pair import Order, Pair
 
 AVAILABLE_IO_DIR = expanduser("~/.cache/cthulhu/available_io")
 
 
-def get_free_transitions(exchanges):
+def get_free_transitions(exchanges: List[str]) -> List[Pair]:
+    """Return pairs that can be transferred freely between exchanges."""
+
     if not os.path.isdir(AVAILABLE_IO_DIR):
         # directory with cached available currency lists does not exist
         return []

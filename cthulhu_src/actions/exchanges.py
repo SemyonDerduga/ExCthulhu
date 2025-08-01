@@ -6,6 +6,6 @@ from tabulate import tabulate
 """
 
 
-def run(ctx):
+def run(ctx) -> None:
     table = [[exchange] for exchange in ccxt.exchanges]
     print(tabulate(table, ["Exchanges"], tablefmt="grid"))

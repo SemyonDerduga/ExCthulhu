@@ -75,6 +75,7 @@ def calc_price(trading_amount: float, current_trade_book: TradeBook) -> Optional
 
 
 def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
+    """Depth-first search for profitable paths from a given node."""
     if task.max_depth < 3:
         return []
 
@@ -134,6 +135,7 @@ def find_paths_worker(adj_list: AdjacencyList, task: Task) -> List[Path]:
 
 @contextmanager
 def workers(*args, num_workers: int = None, **kwargs):
+    """Context manager that spawns worker processes."""
     if num_workers is None:
         num_workers = os.cpu_count()
     processes = [Process(*args, **kwargs) for _ in range(num_workers)]
@@ -146,7 +148,7 @@ def workers(*args, num_workers: int = None, **kwargs):
         yield
         end = time()
         delta_ms = (end - begin) * 1000
-        logger.info(f"Processed in {delta_ms} ms")
+        logger.info(f"⏱️ Processed in {delta_ms} ms")
     finally:
         for process in processes:
             process.terminate()
@@ -166,6 +168,7 @@ def find_paths(
     prune_ratio: float = 0.0,
     num_workers: int | None = None,
 ) -> List[Path]:
+    """Find profitable cycles starting from ``start_node``."""
     if current_node is not None and current_amount is not None:
         worker_tasks = [
             Task(
@@ -211,6 +214,7 @@ def find_paths(
 
 
 def worker(adj_list: AdjacencyList, task_queue: Queue, result_queue: Queue):
+    """Process tasks from ``task_queue`` and push results to ``result_queue``."""
     while True:
         task = task_queue.get()
         result = find_paths_worker(adj_list, task)

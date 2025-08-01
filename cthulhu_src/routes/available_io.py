@@ -10,7 +10,7 @@ from cthulhu_src.actions.available_io import run as run_cmd
 @click.command()
 @click.pass_context
 @click.argument("exchange")
-def available_io(ctx, exchange):
+def available_io(ctx, exchange) -> None:
     """
     Getting currencies available for input and output for exchange.
     """
