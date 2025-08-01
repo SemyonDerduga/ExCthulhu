@@ -7,3 +7,5 @@ aiohttp
 aiohttp_proxy
 pyyaml
 tqdm
+numpy
+statsmodels
