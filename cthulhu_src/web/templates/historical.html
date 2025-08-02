@@ -48,7 +48,8 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="historicalSymbol" class="form-label">Торговая пара</label>
-                                <input type="text" class="form-control" id="historicalSymbol" placeholder="BTC/USDT" required>
+                                <input type="text" class="form-control" id="historicalSymbol" list="historicalSymbolList" placeholder="BTC/USDT" required data-bs-toggle="tooltip" title="Выберите валюту из списка или введите пару">
+                                <datalist id="historicalSymbolList"></datalist>
                             </div>
                             <div class="col-md-4">
                                 <label for="historicalHours" class="form-label">Часов истории</label>
@@ -138,6 +139,25 @@
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', loadHistoricalCurrencies);
+document.getElementById('historicalExchange').addEventListener('change', loadHistoricalCurrencies);
+
+async function loadHistoricalCurrencies() {
+    const exchange = document.getElementById('historicalExchange').value;
+    const list = document.getElementById('historicalSymbolList');
+    list.innerHTML = '';
+    try {
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        data.currencies.forEach(cur => {
+            const option = document.createElement('option');
+            option.value = `${cur}/USDT`;
+            list.appendChild(option);
+        });
+    } catch (err) {
+        console.error('Ошибка загрузки валют', err);
+    }
+}
 // Обработка формы исторических данных
 document.getElementById('historicalForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -267,7 +287,7 @@ function displayHistoricalData(data, symbol) {
         margin: { t: 50, b: 50, l: 50, r: 50 }
     };
     
-    Plotly.newPlot(chartContainer, [trace], layout);
+    Plotly.newPlot(chartContainer, [trace], layout, {responsive: true});
 }
 
 function showLoading(elementId) {

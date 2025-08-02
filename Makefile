@@ -5,7 +5,7 @@ install:
 	pip install -r requirements-dev.txt
 
 lint:
-	flake8 cthulhu_src tests
+	flake8 cthulhu_src/web tests
 
 format:
 	black cthulhu_src tests

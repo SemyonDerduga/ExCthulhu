@@ -48,7 +48,8 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="forecastSymbol" class="form-label">Торговая пара</label>
-                                <input type="text" class="form-control" id="forecastSymbol" placeholder="BTC/USDT" required>
+                                <input type="text" class="form-control" id="forecastSymbol" list="forecastSymbolList" placeholder="BTC/USDT" required data-bs-toggle="tooltip" title="Выберите валюту из списка или введите пару вручную">
+                                <datalist id="forecastSymbolList"></datalist>
                             </div>
                         </div>
                         
@@ -168,6 +169,25 @@
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', loadForecastCurrencies);
+document.getElementById('forecastExchange').addEventListener('change', loadForecastCurrencies);
+
+async function loadForecastCurrencies() {
+    const exchange = document.getElementById('forecastExchange').value;
+    const list = document.getElementById('forecastSymbolList');
+    list.innerHTML = '';
+    try {
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        data.currencies.forEach(cur => {
+            const option = document.createElement('option');
+            option.value = `${cur}/USDT`;
+            list.appendChild(option);
+        });
+    } catch (err) {
+        console.error('Ошибка загрузки валют', err);
+    }
+}
 // Обработка формы прогнозирования
 document.getElementById('forecastForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -383,7 +403,7 @@ function createForecastChart(historicalData, forecastData) {
         ]
     };
     
-    Plotly.newPlot(chartContainer, traces, layout);
+    Plotly.newPlot(chartContainer, traces, layout, {responsive: true});
 }
 
 async function validateForecast() {
@@ -563,7 +583,7 @@ function createValidationChart(actualPrices, forecastPrices) {
     validationChartDiv.id = 'validationChart';
     document.getElementById('validationResults').appendChild(validationChartDiv);
     
-    Plotly.newPlot('validationChart', traces, layout);
+    Plotly.newPlot('validationChart', traces, layout, {responsive: true});
 }
 
 function showLoading(elementId) {

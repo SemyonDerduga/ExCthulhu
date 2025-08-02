@@ -17,9 +17,24 @@
                 <form id="analysisForm">
                     <div class="row">
                         <div class="col-md-3">
-                            <label for="startNode" class="form-label">Стартовая валюта</label>
-                            <input type="text" class="form-control" id="startNode" value="binance_BTC" required>
-                            <div class="form-text">Формат: биржа_валюта (например: binance_BTC)</div>
+                            <label for="startExchange" class="form-label">Биржа стартовой валюты</label>
+                            <select class="form-select" id="startExchange" onchange="loadStartCurrencies()" data-bs-toggle="tooltip" title="Выберите биржу">
+                                <option value="binance" selected>Binance</option>
+                                <option value="yobit">Yobit</option>
+                                <option value="hollaex">Hollaex</option>
+                                <option value="oceanex">Oceanex</option>
+                                <option value="poloniex">Poloniex</option>
+                                <option value="upbit">Upbit</option>
+                                <option value="exmo">Exmo</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="startCurrency" class="form-label">Стартовая валюта</label>
+                            <select class="form-select" id="startCurrency" onchange="updateStartNode()" data-bs-toggle="tooltip" title="Выберите валюту">
+                                <option value="">...</option>
+                            </select>
+                            <input type="hidden" id="startNode" value="binance_BTC">
                         </div>
                         
                         <div class="col-md-3">
@@ -159,6 +174,34 @@
 
 {% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', loadStartCurrencies);
+document.getElementById('startExchange').addEventListener('change', loadStartCurrencies);
+document.getElementById('startCurrency').addEventListener('change', updateStartNode);
+
+async function loadStartCurrencies() {
+    const exchange = document.getElementById('startExchange').value;
+    const select = document.getElementById('startCurrency');
+    select.innerHTML = '';
+    try {
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        data.currencies.forEach(cur => {
+            const option = document.createElement('option');
+            option.value = cur;
+            option.textContent = cur;
+            select.appendChild(option);
+        });
+        updateStartNode();
+    } catch (err) {
+        console.error('Ошибка загрузки валют', err);
+    }
+}
+
+function updateStartNode() {
+    const exchange = document.getElementById('startExchange').value;
+    const currency = document.getElementById('startCurrency').value;
+    document.getElementById('startNode').value = `${exchange}_${currency}`;
+}
 document.getElementById('analysisForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -257,7 +300,7 @@ function displayPriceChart(prices) {
         height: 350
     };
     
-    Plotly.newPlot('priceChart', [trace], layout);
+    Plotly.newPlot('priceChart', [trace], layout, {responsive: true});
 }
 
 function displayForecastChart(forecastData) {
@@ -308,7 +351,7 @@ function displayForecastChart(forecastData) {
         height: 350
     };
     
-    Plotly.newPlot('forecastChart', [priceTrace, forecastTrace], layout);
+    Plotly.newPlot('forecastChart', [priceTrace, forecastTrace], layout, {responsive: true});
 }
 
 function displayArbitrageResults(arbitrageData) {
