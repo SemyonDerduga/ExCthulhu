@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
         height: 300
     };
     
-    Plotly.newPlot('activityChart', [activityTrace], activityLayout);
+    Plotly.newPlot('activityChart', [activityTrace], activityLayout, {responsive: true});
     
     // График бирж
     const exchangesTrace = {
@@ -648,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
         height: 300
     };
     
-    Plotly.newPlot('exchangesChart', [exchangesTrace], exchangesLayout);
+    Plotly.newPlot('exchangesChart', [exchangesTrace], exchangesLayout, {responsive: true});
 });
 </script>
 {% endblock %} 

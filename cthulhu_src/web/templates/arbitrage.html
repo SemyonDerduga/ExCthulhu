@@ -35,7 +35,7 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <label for="startCurrencyExchange" class="form-label">Биржа для стартовой валюты</label>
-                                <select class="form-select" id="startCurrencyExchange" onchange="loadCurrenciesForExchange()">
+                                <select class="form-select" id="startCurrencyExchange" onchange="loadCurrenciesForExchange()" data-bs-toggle="tooltip" title="Выберите биржу, на которой хранится стартовая валюта">
                                     <option value="binance" selected>Binance</option>
                                     <option value="yobit">Yobit</option>
                                     <option value="hollaex">Hollaex</option>
@@ -47,8 +47,8 @@
                                 
                                 <label for="startCurrency" class="form-label mt-2">Стартовая валюта</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." onkeyup="filterCurrencies()">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="loadAllCurrencies()">
+                                    <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." onkeyup="filterCurrencies()" data-bs-toggle="tooltip" title="Фильтр списка валют">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="loadAllCurrencies()" data-bs-toggle="tooltip" title="Обновить список валют">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
@@ -58,11 +58,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="amount" class="form-label">Сумма</label>
-                                <input type="number" class="form-control" id="amount" value="1.0" min="0.1" step="0.1" required>
+                                <input type="number" class="form-control" id="amount" value="1.0" min="0.1" step="0.1" required data-bs-toggle="tooltip" title="Начальный объём для обмена">
                             </div>
                             <div class="col-md-4">
                                 <label for="maxDepth" class="form-label">Максимальная глубина</label>
-                                <select class="form-select" id="maxDepth">
+                                <select class="form-select" id="maxDepth" data-bs-toggle="tooltip" title="Максимальная длина цепочки обменов">
                                     <option value="2">2</option>
                                     <option value="3">3</option>
                                     <option value="4" selected>4</option>
@@ -86,7 +86,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="algorithm" class="form-label">Алгоритм</label>
-                                <select class="form-select" id="algorithm">
+                                <select class="form-select" id="algorithm" data-bs-toggle="tooltip" title="Алгоритм поиска путей">
                                     <option value="dfs" selected>DFS</option>
                                     <option value="bfs">BFS</option>
                                 </select>
