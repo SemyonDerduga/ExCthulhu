@@ -45,16 +45,22 @@
                                     <option value="exmo">Exmo</option>
                                 </select>
                                 
-                                <label for="startCurrency" class="form-label mt-2">Стартовая валюта</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." onkeyup="filterCurrencies()" data-bs-toggle="tooltip" title="Фильтр списка валют">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="loadAllCurrencies()" data-bs-toggle="tooltip" title="Обновить список валют">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
+                                <label for="startCurrency" class="form-label mt-3">Стартовая валюта</label>
+                                <div class="currency-selector">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="currencySearch" placeholder="Поиск валюты..." onkeyup="filterCurrencies()" data-bs-toggle="tooltip" title="Введите название валюты для поиска">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="loadAllCurrencies()" data-bs-toggle="tooltip" title="Обновить список валют">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <div class="currency-dropdown" id="currencyDropdown" style="display: none;">
+                                        <div class="currency-list" id="currencyList">
+                                            <!-- Валюты будут загружены динамически -->
+                                        </div>
+                                    </div>
                                 </div>
-                                <select class="form-select mt-2" id="startCurrency" required size="10">
-                                    <option value="">Выберите валюту...</option>
-                                </select>
+                                <input type="hidden" id="startCurrency" required>
+                                <div id="selectedCurrencyDisplay" class="mt-2"></div>
                             </div>
                             <div class="col-md-4">
                                 <label for="amount" class="form-label">Сумма</label>
@@ -74,7 +80,7 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="exchanges" class="form-label">Биржи</label>
-                                <select class="form-select" id="exchanges" multiple>
+                                <select class="form-select" id="exchanges" multiple size="4">
                                     <option value="binance" selected>Binance</option>
                                     <option value="yobit" selected>Yobit</option>
                                     <option value="hollaex">Hollaex</option>
@@ -83,6 +89,7 @@
                                     <option value="upbit">Upbit</option>
                                     <option value="exmo">Exmo</option>
                                 </select>
+                                <small class="text-muted">Удерживайте Ctrl/Cmd для выбора нескольких бирж</small>
                             </div>
                             <div class="col-md-6">
                                 <label for="algorithm" class="form-label">Алгоритм</label>
@@ -95,7 +102,7 @@
                         
                         <div class="row mt-3">
                             <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <i class="fas fa-play"></i>
                                     Начать поиск
                                 </button>
@@ -157,14 +164,102 @@
     </div>
 </div>
 
+<style>
+.currency-selector {
+    position: relative;
+}
+
+.currency-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.currency-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.currency-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.currency-item:hover {
+    background-color: #f8f9fa;
+}
+
+.currency-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.currency-item:last-child {
+    border-bottom: none;
+}
+
+.selected-currency-badge {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+
+.loading {
+    background: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.profit-positive {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.profit-negative {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.path-code {
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+</style>
+
 <script>
 // Загрузка валют при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     loadCurrencies();
+    initializeTooltips();
 });
 
 let allCurrencies = [];
 let currentExchange = 'binance';
+let selectedCurrency = '';
 
 async function loadCurrencies() {
     await loadAllCurrencies();
@@ -173,6 +268,8 @@ async function loadCurrencies() {
 async function loadCurrenciesForExchange() {
     const exchange = document.getElementById('startCurrencyExchange').value;
     currentExchange = exchange;
+    selectedCurrency = '';
+    updateSelectedCurrencyDisplay();
     await loadAllCurrencies();
 }
 
@@ -182,44 +279,87 @@ async function loadAllCurrencies() {
         const response = await fetch(`/api/currencies/${exchange}`);
         const data = await response.json();
         
-        allCurrencies = data.currencies;
-        const select = document.getElementById('startCurrency');
-        
-        // Очищаем список
-        select.innerHTML = '<option value="">Выберите валюту...</option>';
-        
-        // Добавляем все валюты
-        allCurrencies.forEach(currency => {
-            const option = document.createElement('option');
-            option.value = `${exchange}_${currency}`;
-            option.textContent = currency;
-            select.appendChild(option);
-        });
+        allCurrencies = data.currencies.sort();
+        updateCurrencyList();
         
         console.log(`Загружено ${allCurrencies.length} валют с биржи ${exchange}`);
     } catch (error) {
         console.error('Ошибка загрузки валют:', error);
+        showError('Ошибка загрузки списка валют');
     }
+}
+
+function updateCurrencyList() {
+    const currencyList = document.getElementById('currencyList');
+    currencyList.innerHTML = '';
+    
+    allCurrencies.forEach(currency => {
+        const item = document.createElement('div');
+        item.className = 'currency-item';
+        item.textContent = currency;
+        item.onclick = () => selectCurrency(currency);
+        currencyList.appendChild(item);
+    });
 }
 
 function filterCurrencies() {
     const searchTerm = document.getElementById('currencySearch').value.toLowerCase();
-    const select = document.getElementById('startCurrency');
-    const exchange = document.getElementById('startCurrencyExchange').value;
+    const currencyList = document.getElementById('currencyList');
+    const items = currencyList.querySelectorAll('.currency-item');
     
-    // Очищаем список
-    select.innerHTML = '<option value="">Выберите валюту...</option>';
-    
-    // Фильтруем валюты
-    allCurrencies.forEach(currency => {
-        if (currency.toLowerCase().includes(searchTerm)) {
-            const option = document.createElement('option');
-            option.value = `${exchange}_${currency}`;
-            option.textContent = currency;
-            select.appendChild(option);
+    items.forEach(item => {
+        const currency = item.textContent.toLowerCase();
+        if (currency.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
         }
     });
+    
+    // Показываем дропдаун при вводе
+    if (searchTerm.length > 0) {
+        showCurrencyDropdown();
+    }
 }
+
+function showCurrencyDropdown() {
+    document.getElementById('currencyDropdown').style.display = 'block';
+}
+
+function hideCurrencyDropdown() {
+    document.getElementById('currencyDropdown').style.display = 'none';
+}
+
+function selectCurrency(currency) {
+    selectedCurrency = currency;
+    document.getElementById('startCurrency').value = `${currentExchange}_${currency}`;
+    document.getElementById('currencySearch').value = currency;
+    updateSelectedCurrencyDisplay();
+    hideCurrencyDropdown();
+}
+
+function updateSelectedCurrencyDisplay() {
+    const display = document.getElementById('selectedCurrencyDisplay');
+    if (selectedCurrency) {
+        display.innerHTML = `<span class="selected-currency-badge">
+            <i class="fas fa-check"></i> ${selectedCurrency}
+        </span>`;
+    } else {
+        display.innerHTML = '';
+    }
+}
+
+// Обработчики событий для поиска валют
+document.getElementById('currencySearch').addEventListener('focus', function() {
+    if (this.value.length > 0) {
+        showCurrencyDropdown();
+    }
+});
+
+document.getElementById('currencySearch').addEventListener('blur', function() {
+    // Небольшая задержка, чтобы успеть кликнуть на элемент
+    setTimeout(hideCurrencyDropdown, 200);
+});
 
 // Обработка формы арбитража
 document.getElementById('arbitrageForm').addEventListener('submit', async function(e) {
@@ -230,6 +370,10 @@ document.getElementById('arbitrageForm').addEventListener('submit', async functi
         showError('Пожалуйста, выберите стартовую валюту');
         return;
     }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Поиск...';
     
     showLoading('arbitrageLoading');
     updateArbitrageProgress(0, 'Подготовка к поиску...');
@@ -261,19 +405,44 @@ document.getElementById('arbitrageForm').addEventListener('submit', async functi
         
         // Если есть task_id, подключаемся к потоку прогресса
         if (data.task_id) {
+            console.log('=== НАЧАЛО ОЖИДАНИЯ SSE ===');
             await monitorArbitrageProgress(data.task_id);
+            console.log('=== SSE ЗАВЕРШЕН, ПОЛУЧАЕМ РЕЗУЛЬТАТЫ ===');
             
             // Получаем результаты после завершения
+            console.log('Получаем результаты для task_id:', data.task_id);
             const resultsResponse = await fetch(`/api/arbitrage-results/${data.task_id}`);
+            console.log('Статус ответа результатов:', resultsResponse.status);
+            
             if (resultsResponse.ok) {
                 const results = await resultsResponse.json();
+                console.log('Получены результаты арбитража:', results);
                 displayArbitrageResults(results);
                 showSuccess('Поиск арбитража завершен!');
+            } else if (resultsResponse.status === 202) {
+                console.log('=== ОБНАРУЖЕН СТАТУС 202 ===');
+                const errorData = await resultsResponse.json();
+                console.log('Данные ошибки 202:', errorData);
+                // Анализ еще выполняется, ждем и пробуем снова
+                console.log('=== ПОЛУЧЕН СТАТУС 202 ===');
+                console.log('Анализ еще выполняется, ждем...');
+                console.log('Вызываем waitForResults для task_id:', data.task_id);
+                console.log('Текущее время:', new Date().toISOString());
+                try {
+                    await waitForResults(data.task_id);
+                    console.log('waitForResults завершился успешно');
+                } catch (error) {
+                    console.error('Ошибка в waitForResults:', error);
+                    throw error;
+                }
             } else {
+                const errorText = await resultsResponse.text();
+                console.error('Ошибка получения результатов:', errorText);
                 throw new Error('Не удалось получить результаты анализа');
             }
         } else {
             // Если нет task_id, используем данные напрямую
+            console.log('Используем данные напрямую:', data);
             displayArbitrageResults(data);
             showSuccess('Поиск арбитража завершен!');
         }
@@ -282,7 +451,11 @@ document.getElementById('arbitrageForm').addEventListener('submit', async functi
         console.error('Ошибка:', error);
         showError('Ошибка при выполнении поиска: ' + error.message);
     } finally {
-        setTimeout(() => hideLoading('arbitrageLoading'), 500);
+        setTimeout(() => {
+            hideLoading('arbitrageLoading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-play"></i> Начать поиск';
+        }, 500);
     }
 });
 
@@ -302,6 +475,7 @@ function updateArbitrageProgress(percent, text) {
 
 // Функция для мониторинга прогресса арбитража через Server-Sent Events
 async function monitorArbitrageProgress(taskId) {
+    console.log('=== НАЧАЛО monitorArbitrageProgress ===');
     return new Promise((resolve, reject) => {
         console.log(`Подключаемся к SSE для задачи арбитража: ${taskId}`);
         const eventSource = new EventSource(`/api/progress-stream/${taskId}`);
@@ -321,7 +495,7 @@ async function monitorArbitrageProgress(taskId) {
                 
                 // Если задача завершена, закрываем соединение
                 if (data.completed || data.progress >= 100) {
-                    console.log('Задача арбитража завершена, закрываем SSE');
+                    console.log('=== SSE: Задача арбитража завершена, закрываем соединение ===');
                     eventSource.close();
                     resolve();
                 }
@@ -341,37 +515,122 @@ async function monitorArbitrageProgress(taskId) {
         
         // Таймаут на случай, если поток не завершится
         setTimeout(() => {
-            console.log('SSE таймаут для арбитража, закрываем соединение');
+            console.log('=== SSE: Таймаут для арбитража, закрываем соединение ===');
             eventSource.close();
             resolve();
-        }, 300000); // 5 минут
+        }, 1800000); // 30 минут
     });
+    console.log('=== КОНЕЦ monitorArbitrageProgress ===');
+}
+
+// Функция для ожидания результатов с повторными попытками
+async function waitForResults(taskId) {
+    console.log('=== НАЧАЛО waitForResults ===');
+    console.log('TaskId:', taskId);
+    console.log('Максимум попыток:', 900);
+    console.log('Задержка между попытками:', 2000, 'мс');
+    
+    const maxAttempts = 900; // Максимум 900 попыток (30 минут)
+    const delay = 2000; // 2 секунды между попытками
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`=== Попытка ${attempt}/${maxAttempts} получения результатов ===`);
+        
+        try {
+            console.log(`Отправляем fetch запрос (попытка ${attempt}): /api/arbitrage-results/${taskId}`);
+            const response = await fetch(`/api/arbitrage-results/${taskId}`);
+            console.log(`Получен ответ (попытка ${attempt}):`, response.status, response.statusText);
+            
+            if (response.ok) {
+                const results = await response.json();
+                console.log('=== УСПЕХ! Получены результаты арбитража ===');
+                console.log('Результаты:', results);
+                displayArbitrageResults(results);
+                showSuccess('Поиск арбитража завершен!');
+                console.log('=== КОНЕЦ waitForResults - успешно ===');
+                return;
+            } else if (response.status === 202) {
+                console.log(`Анализ еще выполняется (попытка ${attempt}), ждем ${delay}ms...`);
+                console.log(`Время ожидания: ${new Date().toISOString()}`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                console.log(`Ожидание завершено: ${new Date().toISOString()}`);
+            } else {
+                const errorText = await response.text();
+                console.error('Ошибка получения результатов:', errorText);
+                throw new Error('Не удалось получить результаты анализа');
+            }
+        } catch (error) {
+            console.error(`Ошибка в попытке ${attempt}:`, error);
+            if (attempt === maxAttempts) {
+                throw error;
+            }
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    
+    console.log('=== КОНЕЦ waitForResults - превышено время ожидания ===');
+    throw new Error('Превышено время ожидания результатов');
 }
 
 function displayArbitrageResults(data) {
+    console.log('Отображение результатов арбитража:', data);
+    console.log('Тип данных:', typeof data);
+    console.log('Ключи в данных:', Object.keys(data));
+    
     const container = document.getElementById('arbitrageResults');
     const statsContainer = document.getElementById('arbitrageStats');
     
-    if (!data.opportunities || data.opportunities.length === 0) {
-        container.innerHTML = '<p class="text-muted">Арбитражные возможности не найдены</p>';
-        statsContainer.innerHTML = '<p class="text-muted">Нет данных для отображения</p>';
+    // Проверяем структуру данных
+    let opportunities = [];
+    if (data.opportunities) {
+        opportunities = data.opportunities;
+        console.log('Найдены opportunities в data.opportunities:', opportunities.length);
+    } else if (data.arbitrage && data.arbitrage.opportunities) {
+        opportunities = data.arbitrage.opportunities;
+        console.log('Найдены opportunities в data.arbitrage.opportunities:', opportunities.length);
+    } else {
+        console.log('Opportunities не найдены в данных');
+        console.log('Доступные ключи:', Object.keys(data));
+        if (data.arbitrage) {
+            console.log('Ключи в data.arbitrage:', Object.keys(data.arbitrage));
+        }
+    }
+    
+    if (!opportunities || opportunities.length === 0) {
+        console.log('Нет арбитражных возможностей');
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Арбитражные возможности не найдены</strong><br>
+                <small>Попробуйте изменить параметры поиска или выберите другую стартовую валюту</small>
+            </div>
+        `;
+        statsContainer.innerHTML = `
+            <div class="text-center">
+                <h4 class="text-muted">0</h4>
+                <small class="text-muted">Найдено возможностей</small>
+            </div>
+        `;
         return;
     }
     
     // Статистика
-    const opportunities = data.opportunities;
     const profitableCount = opportunities.filter(opp => opp.profit_percent > 0).length;
     const bestProfit = Math.max(...opportunities.map(opp => opp.profit_percent));
     
     statsContainer.innerHTML = `
         <div class="row text-center">
-            <div class="col-6">
+            <div class="col-4">
                 <h4 class="text-primary">${opportunities.length}</h4>
                 <small class="text-muted">Всего путей</small>
             </div>
-            <div class="col-6">
+            <div class="col-4">
                 <h4 class="text-success">${profitableCount}</h4>
                 <small class="text-muted">Прибыльных</small>
+            </div>
+            <div class="col-4">
+                <h4 class="text-info">${((profitableCount / opportunities.length) * 100).toFixed(1)}%</h4>
+                <small class="text-muted">Успешность</small>
             </div>
         </div>
         <hr>
@@ -383,13 +642,13 @@ function displayArbitrageResults(data) {
     
     // Результаты
     let html = '<div class="table-responsive"><table class="table table-hover">';
-    html += '<thead><tr><th>Путь</th><th>Прибыль</th><th>Сумма</th></tr></thead><tbody>';
+    html += '<thead class="table-light"><tr><th>Путь</th><th>Прибыль</th><th>Сумма</th></tr></thead><tbody>';
     
     opportunities.slice(0, 10).forEach(opp => {
-        const profitClass = opp.profit_percent > 0 ? 'text-success' : 'text-danger';
+        const profitClass = opp.profit_percent > 0 ? 'profit-positive' : 'profit-negative';
         html += `
             <tr>
-                <td><code>${opp.path.join(' → ')}</code></td>
+                <td><span class="path-code">${opp.path.join(' → ')}</span></td>
                 <td class="${profitClass}">${opp.profit_percent.toFixed(2)}%</td>
                 <td>${opp.final_amount.toFixed(4)}</td>
             </tr>
@@ -414,13 +673,47 @@ function hideLoading(elementId) {
 }
 
 function showSuccess(message) {
-    // Простая реализация уведомления
-    alert('✅ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
 }
 
 function showError(message) {
-    // Простая реализация уведомления
-    alert('❌ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+
+function initializeTooltips() {
+    // Инициализация Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 }
 </script>
 {% endblock %} 

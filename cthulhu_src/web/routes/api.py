@@ -151,53 +151,69 @@ async def get_historical_data(
     symbol: str = Query(..., description="Торговая пара (например: BTC/USDT)"),
     hours: int = 24,
     format: str = "prices",
+    timeframe: str = "1m"
 ):
     """Получить исторические данные."""
     try:
         historical_service = MultiExchangeHistoricalService([exchange])
 
+        # Рассчитываем limit по timeframe
+        tf_map = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440}
+        interval = tf_map.get(timeframe, 1)
+        limit = min(1000, max(1, int(hours * 60 / interval))) if "m" in timeframe else min(1000, max(1, int(hours / (interval / 60))))
+
         if format == "prices":
-            prices = await historical_service.services[exchange].get_price_history(
-                symbol, hours=hours
-            )
-
-            if not prices:
-                raise HTTPException(status_code=404, detail="Данные не найдены")
-
-            return {
-                "exchange": exchange,
-                "symbol": symbol,
-                "prices": prices,
-                "count": len(prices),
-            }
-
+            try:
+                prices = await historical_service.services[exchange].get_price_history(
+                    symbol, timeframe=timeframe, hours=hours
+                )
+                if not prices:
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не найдена на бирже {exchange}")
+                return {
+                    "exchange": exchange,
+                    "symbol": symbol,
+                    "prices": prices,
+                    "count": len(prices),
+                    "timeframe": timeframe
+                }
+            except Exception as e:
+                if "does not have market symbol" in str(e):
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не поддерживается на бирже {exchange}")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
         elif format == "ohlcv":
-            ohlcv_data = await historical_service.services[exchange].get_ohlcv(
-                symbol, limit=100
-            )
-
-            if not ohlcv_data:
-                raise HTTPException(status_code=404, detail="Данные не найдены")
-
-            return {
-                "exchange": exchange,
-                "symbol": symbol,
-                "ohlcv": ohlcv_data,
-                "count": len(ohlcv_data),
-            }
-
+            try:
+                ohlcv_data = await historical_service.services[exchange].get_ohlcv(
+                    symbol, timeframe=timeframe, limit=limit
+                )
+                if not ohlcv_data:
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не найдена на бирже {exchange}")
+                return {
+                    "exchange": exchange,
+                    "symbol": symbol,
+                    "ohlcv": ohlcv_data,
+                    "count": len(ohlcv_data),
+                    "timeframe": timeframe
+                }
+            except Exception as e:
+                if "does not have market symbol" in str(e):
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не поддерживается на бирже {exchange}")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
         elif format == "info":
-            market_info = await historical_service.services[exchange].get_market_info(
-                symbol
-            )
-
-            if not market_info:
-                raise HTTPException(status_code=404, detail="Данные не найдены")
-
-            return market_info
-
+            try:
+                market_info = await historical_service.services[exchange].get_market_info(
+                    symbol
+                )
+                if not market_info:
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не найдена на бирже {exchange}")
+                return market_info
+            except Exception as e:
+                if "does not have market symbol" in str(e):
+                    raise HTTPException(status_code=404, detail=f"Торговая пара {symbol} не поддерживается на бирже {exchange}")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
         await historical_service.close()
-
     except Exception as e:
         logger.error(f"Ошибка получения данных: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -219,22 +235,30 @@ async def make_forecast(request: ForecastRequest, external_task_id: str = None):
             method_forecasts = forecast_service.predict(
                 request.prices, request.horizons, method
             )
-            forecasts.extend(
-                [
-                    {
-                        "method": method,
-                        "horizon": horizon,
-                        "mu": forecast.mu,
-                        "sigma": forecast.sigma,
-                        "confidence": (
-                            max(0.0, 1.0 - (forecast.sigma / abs(forecast.mu)))
-                            if forecast.sigma > 0
-                            else 1.0
-                        ),
-                    }
-                    for horizon, forecast in zip(request.horizons, method_forecasts)
-                ]
-            )
+            for horizon, forecast in zip(request.horizons, method_forecasts):
+                # Генерируем прогнозируемые цены на основе статистик
+                last_price = request.prices[-1]
+                forecast_prices = []
+                
+                for i in range(horizon):
+                    # Используем нормальное распределение для генерации прогноза
+                    import numpy as np
+                    forecast_price = last_price * np.exp(forecast.mu + np.random.normal(0, forecast.sigma))
+                    forecast_prices.append(forecast_price)
+                    last_price = forecast_price
+                
+                forecasts.append({
+                    "method": method,
+                    "horizon": horizon,
+                    "mu": forecast.mu,
+                    "sigma": forecast.sigma,
+                    "confidence": (
+                        max(0.0, 1.0 - (forecast.sigma / abs(forecast.mu)))
+                        if forecast.sigma > 0
+                        else 1.0
+                    ),
+                    "forecast_prices": forecast_prices
+                })
 
         if external_task_id:
             update_progress(
@@ -259,22 +283,19 @@ async def find_arbitrage(request: ArbitrageRequest, external_task_id: str = None
 
     task_id = external_task_id if external_task_id else str(uuid.uuid4())
 
-    # Если это прямой вызов (не из forecast-arbitrage), запускаем в фоне
-    if not external_task_id:
-        # Сразу возвращаем task_id и запускаем анализ в фоне
-        update_progress(task_id, 0, "Подготовка к поиску арбитража", "init")
+    # Всегда запускаем в фоне и возвращаем task_id
+    update_progress(task_id, 0, "Подготовка к поиску арбитража", "init")
 
-        # Запускаем анализ в фоне
-        asyncio.create_task(run_arbitrage_analysis(task_id, request))
+    # Запускаем анализ в фоне
+    asyncio.create_task(run_arbitrage_analysis(task_id, request))
 
-        return {"task_id": task_id}
-
-    # Если это вызов из forecast-arbitrage, выполняем синхронно
-    return await run_arbitrage_analysis(task_id, request)
+    return {"task_id": task_id}
 
 
 async def run_arbitrage_analysis(task_id: str, request: ArbitrageRequest):
     """Выполнить анализ арбитража."""
+    logger.info(f"Начинаем анализ арбитража для task_id: {task_id}")
+    logger.info(f"Параметры запроса: {request}")
     try:
         update_progress(task_id, 0, "Подготовка к поиску арбитража", "init")
 
@@ -395,14 +416,20 @@ async def run_arbitrage_analysis(task_id: str, request: ArbitrageRequest):
                 )
 
         result = {"opportunities": opportunities, "total_found": len(opportunities)}
+        logger.info(f"Найдено {len(opportunities)} арбитражных возможностей")
+        logger.info(f"Результат: {result}")
 
         # Сохраняем результаты в глобальном хранилище
         from cthulhu_src.web.routes.progress import _progress_store
 
         if task_id in _progress_store:
             _progress_store[task_id]["results"] = result
+            logger.info(f"Результаты сохранены для task_id: {task_id}")
+        else:
+            logger.warning(f"Task_id {task_id} не найден в _progress_store")
 
         update_progress(task_id, 100, "Поиск арбитража завершен", "complete")
+        logger.info(f"Анализ арбитража завершен для task_id: {task_id}")
 
         return result
 
@@ -468,7 +495,8 @@ async def run_forecast_arbitrage_analysis(
             exchanges=request.exchanges,
             algorithm="dfs",
         )
-        arbitrage_result = await find_arbitrage(arbitrage_request, task_id)
+        # Вызываем run_arbitrage_analysis напрямую для получения результата
+        arbitrage_result = await run_arbitrage_analysis(task_id, arbitrage_request)
 
         update_progress(task_id, 85, "Арбитражный анализ завершен", "arbitrage")
 
@@ -532,15 +560,23 @@ async def get_arbitrage_results(task_id: str):
     """Получить результаты арбитража."""
     from cthulhu_src.web.routes.progress import _progress_store
 
+    logger.info(f"Запрос результатов для task_id: {task_id}")
+
     if task_id not in _progress_store:
+        logger.warning(f"Task_id {task_id} не найден в _progress_store")
         raise HTTPException(status_code=404, detail="Задача не найдена")
 
     progress_data = _progress_store[task_id]
     results = progress_data.get("results")
 
+    logger.info(f"Прогресс для task_id {task_id}: {progress_data.get('progress', 0)}%")
+    logger.info(f"Результаты для task_id {task_id}: {results is not None}")
+
     if not results:
+        logger.info(f"Результаты еще не готовы для task_id {task_id}")
         raise HTTPException(status_code=202, detail="Анализ еще выполняется")
 
+    logger.info(f"Возвращаем результаты для task_id {task_id}: {len(results.get('opportunities', []))} возможностей")
     return {
         "task_id": task_id,
         "progress": progress_data.get("progress", 0),

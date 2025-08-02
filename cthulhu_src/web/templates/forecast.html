@@ -35,7 +35,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <label for="forecastExchange" class="form-label">Биржа</label>
-                                <select class="form-select" id="forecastExchange" required>
+                                <select class="form-select" id="forecastExchange" onchange="loadSymbolsForExchange()" required>
                                     <option value="">Выберите биржу...</option>
                                     <option value="binance">Binance</option>
                                     <option value="yobit">Yobit</option>
@@ -48,34 +48,74 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="forecastSymbol" class="form-label">Торговая пара</label>
-                                <input type="text" class="form-control" id="forecastSymbol" list="forecastSymbolList" placeholder="BTC/USDT" required data-bs-toggle="tooltip" title="Выберите валюту из списка или введите пару вручную">
-                                <datalist id="forecastSymbolList"></datalist>
+                                <div class="symbol-selector">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="symbolSearch" placeholder="Поиск торговой пары..." onkeyup="filterSymbols()" data-bs-toggle="tooltip" title="Введите название торговой пары для поиска">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="loadAllSymbols()" data-bs-toggle="tooltip" title="Обновить список пар">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <div class="symbol-dropdown" id="symbolDropdown" style="display: none;">
+                                        <div class="symbol-list" id="symbolList">
+                                            <!-- Торговые пары будут загружены динамически -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="forecastSymbol" required>
+                                <div id="selectedSymbolDisplay" class="mt-2"></div>
                             </div>
                         </div>
                         
                         <div class="row mt-3">
                             <div class="col-md-4">
                                 <label for="forecastHours" class="form-label">Часов истории</label>
-                                <input type="number" class="form-control" id="forecastHours" value="24" min="1" max="168" required>
+                                <input type="number" class="form-control" id="forecastHours" value="24" min="1" max="168" required data-bs-toggle="tooltip" title="Количество часов исторических данных для анализа">
                             </div>
                             <div class="col-md-4">
                                 <label for="forecastMethod" class="form-label">Метод прогнозирования</label>
-                                <select class="form-select" id="forecastMethod">
+                                <select class="form-select" id="forecastMethod" data-bs-toggle="tooltip" title="Выберите алгоритм прогнозирования (Ctrl+клик для множественного выбора)" multiple>
                                     <option value="mean" selected>Среднее значение</option>
                                     <option value="median">Медиана</option>
                                     <option value="ema">EMA</option>
                                     <option value="arima">ARIMA</option>
                                 </select>
+                                <small class="form-text text-muted">Ctrl+клик для выбора нескольких методов</small>
                             </div>
                             <div class="col-md-4">
                                 <label for="forecastHorizon" class="form-label">Горизонт прогноза</label>
-                                <input type="number" class="form-control" id="forecastHorizon" value="5" min="1" max="30" required>
+                                <input type="number" class="form-control" id="forecastHorizon" value="5" min="1" max="30" required data-bs-toggle="tooltip" title="Количество периодов для прогнозирования">
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <label for="forecastLookback" class="form-label">Lookback (периодов)</label>
+                                <input type="number" class="form-control" id="forecastLookback" value="60" min="10" max="1000" required data-bs-toggle="tooltip" title="Количество исторических периодов для анализа">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="forecastStartPoint" class="form-label">Точка начала прогноза</label>
+                                <select class="form-select" id="forecastStartPoint" data-bs-toggle="tooltip" title="От какого момента времени делать прогноз">
+                                    <option value="end" selected>Конец исторических данных</option>
+                                    <option value="middle">Середина данных</option>
+                                    <option value="custom">Пользовательская точка</option>
+                                    <option value="interactive">Интерактивный выбор на графике</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="customStartPointContainer" style="display: none;">
+                                <label for="customStartPoint" class="form-label">Пользовательская точка</label>
+                                <input type="number" class="form-control" id="customStartPoint" min="0" data-bs-toggle="tooltip" title="Индекс точки в исторических данных">
+                            </div>
+                            <div class="col-md-4" id="interactiveInfoContainer" style="display: none;">
+                                <label class="form-label">Интерактивный режим</label>
+                                <div class="alert alert-info">
+                                    <small>Кликните на график для выбора точки прогноза</small>
+                                </div>
                             </div>
                         </div>
                         
                         <div class="row mt-3">
                             <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <i class="fas fa-play"></i>
                                     Создать прогноз
                                 </button>
@@ -106,7 +146,7 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-info-circle"></i>
-                        Информация
+                        Информация о прогнозе
                     </h5>
                 </div>
                 <div class="card-body">
@@ -123,43 +163,13 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-success text-white">
                     <h5 class="card-title mb-0">
-                        <i class="fas fa-chart-area"></i>
-                        График прогнозирования
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="forecastChart">
-                        <p class="text-muted">График появится после создания прогноза</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
                         <i class="fas fa-chart-line"></i>
-                        Валидация прогноза
+                        Результаты прогнозирования
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="validationHours" class="form-label">Часов для валидации</label>
-                            <input type="number" class="form-control" id="validationHours" value="6" min="1" max="24">
-                        </div>
-                        <div class="col-md-6">
-                            <button type="button" class="btn btn-warning mt-4" onclick="validateForecast()">
-                                <i class="fas fa-check-circle"></i>
-                                Проверить точность прогноза
-                            </button>
-                        </div>
-                    </div>
-                    <div id="validationResults" class="mt-3">
-                        <p class="text-muted">Нажмите кнопку для проверки точности прогноза</p>
+                    <div id="forecastResults">
+                        <p class="text-muted">Результаты прогнозирования появятся здесь</p>
                     </div>
                 </div>
             </div>
@@ -167,84 +177,350 @@
     </div>
 </div>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', loadForecastCurrencies);
-document.getElementById('forecastExchange').addEventListener('change', loadForecastCurrencies);
+<style>
+.symbol-selector {
+    position: relative;
+}
 
-async function loadForecastCurrencies() {
+.symbol-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.symbol-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.symbol-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.symbol-item:hover {
+    background-color: #f8f9fa;
+}
+
+.symbol-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.symbol-item:last-child {
+    border-bottom: none;
+}
+
+.selected-symbol-badge {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+
+.loading {
+    background: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.chart-container {
+    height: 400px;
+    margin: 20px 0;
+}
+
+.forecast-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.forecast-stats .stat-item {
+    text-align: center;
+    padding: 10px;
+}
+
+.forecast-stats .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.forecast-stats .stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.chart-container.interactive {
+    cursor: crosshair;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+</style>
+
+<script>
+// Загрузка символов при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTooltips();
+});
+
+let allSymbols = [];
+let currentExchange = '';
+let selectedSymbol = '';
+
+async function loadSymbolsForExchange() {
     const exchange = document.getElementById('forecastExchange').value;
-    const list = document.getElementById('forecastSymbolList');
-    list.innerHTML = '';
-    try {
-        const response = await fetch(`/api/currencies/${exchange}`);
-        const data = await response.json();
-        data.currencies.forEach(cur => {
-            const option = document.createElement('option');
-            option.value = `${cur}/USDT`;
-            list.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Ошибка загрузки валют', err);
+    currentExchange = exchange;
+    selectedSymbol = '';
+    updateSelectedSymbolDisplay();
+    
+    if (exchange) {
+        await loadAllSymbols();
     }
 }
+
+async function loadAllSymbols() {
+    try {
+        const exchange = document.getElementById('forecastExchange').value;
+        if (!exchange) {
+            showError('Сначала выберите биржу');
+            return;
+        }
+        
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        
+        // Получаем торговые пары из валют
+        allSymbols = [];
+        const currencies = data.currencies;
+        
+        // Создаем популярные торговые пары
+        const popularQuotes = ['USDT', 'BTC', 'ETH', 'USD', 'USDC', 'BNB'];
+        
+        currencies.forEach(base => {
+            popularQuotes.forEach(quote => {
+                if (base !== quote) {
+                    allSymbols.push(`${base}/${quote}`);
+                }
+            });
+        });
+        
+        // Убираем дубликаты и сортируем
+        allSymbols = [...new Set(allSymbols)].sort();
+        updateSymbolList();
+        
+        console.log(`Загружено ${allSymbols.length} торговых пар для биржи ${exchange}`);
+    } catch (error) {
+        console.error('Ошибка загрузки торговых пар:', error);
+        showError('Ошибка загрузки списка торговых пар');
+    }
+}
+
+function updateSymbolList() {
+    const symbolList = document.getElementById('symbolList');
+    symbolList.innerHTML = '';
+    
+    allSymbols.forEach(symbol => {
+        const item = document.createElement('div');
+        item.className = 'symbol-item';
+        item.textContent = symbol;
+        item.onclick = () => selectSymbol(symbol);
+        symbolList.appendChild(item);
+    });
+}
+
+function filterSymbols() {
+    const searchTerm = document.getElementById('symbolSearch').value.toLowerCase();
+    const symbolList = document.getElementById('symbolList');
+    const items = symbolList.querySelectorAll('.symbol-item');
+    
+    items.forEach(item => {
+        const symbol = item.textContent.toLowerCase();
+        if (symbol.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Показываем дропдаун при вводе
+    if (searchTerm.length > 0) {
+        showSymbolDropdown();
+    }
+}
+
+function showSymbolDropdown() {
+    document.getElementById('symbolDropdown').style.display = 'block';
+}
+
+function hideSymbolDropdown() {
+    document.getElementById('symbolDropdown').style.display = 'none';
+}
+
+function selectSymbol(symbol) {
+    selectedSymbol = symbol;
+    document.getElementById('forecastSymbol').value = symbol;
+    document.getElementById('symbolSearch').value = symbol;
+    updateSelectedSymbolDisplay();
+    hideSymbolDropdown();
+}
+
+function updateSelectedSymbolDisplay() {
+    const display = document.getElementById('selectedSymbolDisplay');
+    if (selectedSymbol) {
+        display.innerHTML = `<span class="selected-symbol-badge">
+            <i class="fas fa-check"></i> ${selectedSymbol}
+        </span>`;
+    } else {
+        display.innerHTML = '';
+    }
+}
+
+// Обработчики событий для поиска торговых пар
+document.getElementById('symbolSearch').addEventListener('focus', function() {
+    if (this.value.length > 0) {
+        showSymbolDropdown();
+    }
+});
+
+document.getElementById('symbolSearch').addEventListener('blur', function() {
+    // Небольшая задержка, чтобы успеть кликнуть на элемент
+    setTimeout(hideSymbolDropdown, 200);
+});
+
+// Обработка выбора точки начала прогноза
+document.getElementById('forecastStartPoint').addEventListener('change', function() {
+    const customContainer = document.getElementById('customStartPointContainer');
+    const interactiveContainer = document.getElementById('interactiveInfoContainer');
+    
+    customContainer.style.display = 'none';
+    interactiveContainer.style.display = 'none';
+    
+    if (this.value === 'custom') {
+        customContainer.style.display = 'block';
+    } else if (this.value === 'interactive') {
+        interactiveContainer.style.display = 'block';
+    }
+});
+
 // Обработка формы прогнозирования
 document.getElementById('forecastForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const exchange = document.getElementById('forecastExchange').value;
     const symbol = document.getElementById('forecastSymbol').value;
-    
-    if (!exchange || !symbol) {
-        showError('Пожалуйста, заполните все обязательные поля');
+    if (!symbol) {
+        showError('Пожалуйста, выберите торговую пару');
         return;
     }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание прогноза...';
     
     showLoading('forecastLoading');
     updateForecastProgress(0, 'Загрузка исторических данных...');
     
     try {
+        const exchange = document.getElementById('forecastExchange').value;
+        const hours = parseInt(document.getElementById('forecastHours').value);
+        // Получаем выбранные методы (поддержка множественного выбора)
+        const methodSelect = document.getElementById('forecastMethod');
+        const selectedMethods = Array.from(methodSelect.selectedOptions).map(option => option.value);
+        
+        if (selectedMethods.length === 0) {
+            throw new Error('Пожалуйста, выберите хотя бы один метод прогнозирования');
+        }
+        
+        const horizon = parseInt(document.getElementById('forecastHorizon').value);
+        const lookback = parseInt(document.getElementById('forecastLookback').value);
+        const startPointType = document.getElementById('forecastStartPoint').value;
+        
         // Сначала получаем исторические данные
-        const historicalResponse = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${document.getElementById('forecastHours').value}`);
+        const historicalResponse = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${hours}&timeframe=1m`);
         
         if (!historicalResponse.ok) {
-            throw new Error(`Ошибка загрузки исторических данных: ${historicalResponse.status}`);
+            throw new Error('Не удалось получить исторические данные');
         }
         
         const historicalData = await historicalResponse.json();
+        
+        if (!historicalData.prices || historicalData.prices.length === 0) {
+            throw new Error('Недостаточно исторических данных для прогнозирования');
+        }
+        
+        // Определяем точку начала прогноза
+        let startIndex = historicalData.prices.length - 1; // по умолчанию конец
+        
+        if (startPointType === 'middle') {
+            startIndex = Math.floor(historicalData.prices.length / 2);
+        } else if (startPointType === 'custom') {
+            const customPoint = parseInt(document.getElementById('customStartPoint').value);
+            if (customPoint >= 0 && customPoint < historicalData.prices.length) {
+                startIndex = customPoint;
+            } else {
+                throw new Error('Некорректная пользовательская точка');
+            }
+        }
+        
+        // Используем только данные до выбранной точки
+        const pricesForForecast = historicalData.prices.slice(0, startIndex + 1);
+        
         updateForecastProgress(50, 'Создание прогноза...');
         
         // Создаем прогноз
-        const forecastData = {
-            prices: historicalData.prices,
-            methods: [document.getElementById('forecastMethod').value],
-            horizons: [parseInt(document.getElementById('forecastHorizon').value)],
-            lookback: 60
-        };
-        
         const forecastResponse = await fetch('/api/forecast', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(forecastData)
+            body: JSON.stringify({
+                prices: pricesForForecast,
+                methods: selectedMethods,
+                horizons: [horizon],
+                lookback: lookback
+            })
         });
         
         if (!forecastResponse.ok) {
-            throw new Error(`Ошибка создания прогноза: ${forecastResponse.status}`);
+            throw new Error('Ошибка при создании прогноза');
         }
         
-        const forecastResult = await forecastResponse.json();
-        updateForecastProgress(100, 'Прогноз создан');
+        const forecastData = await forecastResponse.json();
         
-        displayForecastResults(forecastResult, historicalData);
+        updateForecastProgress(100, 'Прогноз завершен');
+        
+        displayForecastResults(forecastData, historicalData, symbol, startIndex);
         showSuccess('Прогноз успешно создан!');
         
     } catch (error) {
         console.error('Ошибка:', error);
         showError('Ошибка при создании прогноза: ' + error.message);
     } finally {
-        setTimeout(() => hideLoading('forecastLoading'), 500);
+        setTimeout(() => {
+            hideLoading('forecastLoading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-play"></i> Создать прогноз';
+        }, 500);
     }
 });
 
@@ -262,328 +538,202 @@ function updateForecastProgress(percent, text) {
     }
 }
 
-let currentForecastData = null;
-let currentHistoricalData = null;
-
-function displayForecastResults(forecastData, historicalData) {
+function displayForecastResults(forecastData, historicalData, symbol, startPoint = null) {
+    const container = document.getElementById('forecastResults');
     const infoContainer = document.getElementById('forecastInfo');
     
     if (!forecastData.forecasts || forecastData.forecasts.length === 0) {
-        document.getElementById('forecastChart').innerHTML = '<p class="text-muted">Не удалось создать прогноз</p>';
+        container.innerHTML = '<p class="text-muted">Не удалось создать прогноз</p>';
         return;
     }
     
-    const forecast = forecastData.forecasts[0];
+    const prices = historicalData.prices;
+    const startIndex = startPoint || prices.length - 1;
     
-    // Сохраняем данные для валидации
-    currentForecastData = forecastData;
-    currentHistoricalData = historicalData;
-    
-    // Информация
-    infoContainer.innerHTML = `
-        <div class="row text-center">
-            <div class="col-6">
-                <h4 class="text-primary">${historicalData.prices.length}</h4>
-                <small class="text-muted">Точек данных</small>
+    // Информация о прогнозе
+    let infoHtml = `
+        <div class="forecast-stats">
+            <div class="row">
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value">${prices.length}</div>
+                        <div class="stat-label">Точек данных</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value">${forecastData.forecasts.length}</div>
+                        <div class="stat-label">Методов прогноза</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value">${forecastData.forecasts[0].horizon}</div>
+                        <div class="stat-label">Горизонт</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value">${startIndex}</div>
+                        <div class="stat-label">Точка начала</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-6">
-                <h4 class="text-success">${forecast.horizon}</h4>
-                <small class="text-muted">Горизонт прогноза</small>
-            </div>
-        </div>
-        <hr>
-        <div class="text-center">
-            <h5 class="text-info">${forecast.method}</h5>
-            <small class="text-muted">Метод прогнозирования</small>
         </div>
     `;
     
-    // Создаем график
-    createForecastChart(historicalData, forecastData);
-}
-
-function createForecastChart(historicalData, forecastData) {
-    const chartContainer = document.getElementById('forecastChart');
-    const prices = historicalData.prices;
-    const forecast = forecastData.forecasts[0];
+    infoContainer.innerHTML = infoHtml;
     
-    // Создаем временные метки
-    const timestamps = Array.from({length: prices.length}, (_, i) => i);
+    // Создаем график с историческими данными
+    const traces = [];
     
-    // Создаем прогнозные значения
-    const lastPrice = prices[prices.length - 1];
-    const forecastChange = forecast.mu / 100;
-    const forecastPrices = [];
+    // Исторические данные до точки прогноза
+    traces.push({
+        x: Array.from({length: startIndex + 1}, (_, i) => i),
+        y: prices.slice(0, startIndex + 1),
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Исторические данные (до прогноза)',
+        line: {color: '#007bff', width: 2}
+    });
     
-    for (let i = 1; i <= forecast.horizon; i++) {
-        const predictedPrice = lastPrice * (1 + forecastChange * i);
-        forecastPrices.push(predictedPrice);
+    // Исторические данные после точки прогноза (для сравнения)
+    if (startIndex < prices.length - 1) {
+        traces.push({
+            x: Array.from({length: prices.length - startIndex - 1}, (_, i) => startIndex + 1 + i),
+            y: prices.slice(startIndex + 1),
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Реальные данные (после прогноза)',
+            line: {color: '#6c757d', width: 2}
+        });
     }
     
-    const forecastTimestamps = Array.from({length: forecast.horizon}, (_, i) => prices.length + i);
+    // Прогнозы для каждого метода
+    const colors = ['#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14'];
     
-    // Создаем доверительные интервалы
-    const confidence = forecast.confidence;
-    const upperBound = forecastPrices.map(price => price * (1 + (1 - confidence) * 0.5));
-    const lowerBound = forecastPrices.map(price => price * (1 - (1 - confidence) * 0.5));
-    
-    const traces = [
-        {
-            x: timestamps,
-            y: prices,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Исторические данные',
-            line: {
-                color: '#667eea',
-                width: 3
-            }
-        },
-        {
-            x: forecastTimestamps,
-            y: forecastPrices,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Прогноз',
-            line: {
-                color: '#28a745',
-                width: 3,
-                dash: 'dash'
-            },
-            marker: {
-                size: 8,
-                color: '#28a745'
-            }
-        },
-        {
-            x: forecastTimestamps.concat(forecastTimestamps.slice().reverse()),
-            y: upperBound.concat(lowerBound.slice().reverse()),
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Доверительный интервал',
-            line: {
-                color: 'rgba(40, 167, 69, 0.2)',
-                width: 0
-            },
-            fill: 'tonexty',
-            fillcolor: 'rgba(40, 167, 69, 0.1)',
-            showlegend: false
+    forecastData.forecasts.forEach((forecast, index) => {
+        if (forecast.forecast_prices && forecast.forecast_prices.length > 0) {
+            traces.push({
+                x: Array.from({length: forecast.forecast_prices.length}, (_, i) => startIndex + 1 + i),
+                y: forecast.forecast_prices,
+                type: 'scatter',
+                mode: 'lines',
+                name: `Прогноз (${forecast.method})`,
+                line: {color: colors[index % colors.length], dash: 'dash', width: 2}
+            });
         }
-    ];
+    });
+    
+    // Точка начала прогноза
+    traces.push({
+        x: [startIndex],
+        y: [prices[startIndex]],
+        type: 'scatter',
+        mode: 'markers',
+        name: 'Точка начала прогноза',
+        marker: {color: '#ff0000', size: 10, symbol: 'diamond'}
+    });
     
     const layout = {
-        title: `Прогноз цены: ${forecast.method.toUpperCase()}`,
-        xaxis: { 
-            title: 'Время',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        yaxis: { 
-            title: 'Цена',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        height: 500,
-        margin: { t: 50, b: 50, l: 50, r: 50 },
-        legend: {
-            x: 0.02,
-            y: 0.98
-        },
-        annotations: [
-            {
-                x: forecastTimestamps[0],
-                y: forecastPrices[0],
-                text: `Прогноз: ${forecast.mu > 0 ? '+' : ''}${forecast.mu.toFixed(4)}%`,
-                showarrow: true,
-                arrowhead: 2,
-                arrowcolor: '#28a745',
-                ax: 20,
-                ay: -30
-            }
-        ]
+        title: `Прогноз для ${symbol} (начиная с точки ${startIndex})`,
+        xaxis: {title: 'Время'},
+        yaxis: {title: 'Цена'},
+        hovermode: 'x unified',
+        legend: {orientation: 'h', y: -0.2}
     };
     
-    Plotly.newPlot(chartContainer, traces, layout, {responsive: true});
-}
-
-async function validateForecast() {
-    if (!currentForecastData || !currentHistoricalData) {
-        showError('Сначала создайте прогноз');
-        return;
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false
+    };
+    
+    container.innerHTML = '<div id="forecastChart" class="chart-container"></div>';
+    
+    const plotDiv = document.getElementById('forecastChart');
+    const startPointSelect = document.getElementById('forecastStartPoint');
+    
+    // Добавляем класс interactive если выбран интерактивный режим
+    if (startPointSelect.value === 'interactive') {
+        plotDiv.classList.add('interactive');
     }
     
-    const validationHours = parseInt(document.getElementById('validationHours').value);
-    const exchange = document.getElementById('forecastExchange').value;
-    const symbol = document.getElementById('forecastSymbol').value;
+    Plotly.newPlot(plotDiv, traces, layout, config);
     
+    // Добавляем обработчик кликов для интерактивного режима
+    if (startPointSelect.value === 'interactive') {
+        plotDiv.on('plotly_click', function(data) {
+            const point = data.points[0];
+            const xIndex = Math.round(point.x);
+            
+            if (xIndex >= 0 && xIndex < prices.length) {
+                // Создаем новый прогноз из выбранной точки
+                createForecastFromPoint(xIndex);
+            }
+        });
+    }
+}
+
+async function createForecastFromPoint(startIndex) {
     try {
-        // Получаем новые данные для валидации
-        const response = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${validationHours}`);
+        const symbol = document.getElementById('forecastSymbol').value;
+        const exchange = document.getElementById('forecastExchange').value;
+        const hours = parseInt(document.getElementById('forecastHours').value);
+        const methodSelect = document.getElementById('forecastMethod');
+        const selectedMethods = Array.from(methodSelect.selectedOptions).map(option => option.value);
+        const horizon = parseInt(document.getElementById('forecastHorizon').value);
+        const lookback = parseInt(document.getElementById('forecastLookback').value);
         
-        if (!response.ok) {
-            throw new Error(`Ошибка загрузки данных для валидации: ${response.status}`);
+        if (selectedMethods.length === 0) {
+            throw new Error('Пожалуйста, выберите хотя бы один метод прогнозирования');
         }
         
-        const validationData = await response.json();
-        const forecast = currentForecastData.forecasts[0];
+        // Получаем исторические данные
+        const historicalResponse = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${hours}&timeframe=1m`);
         
-        // Сравниваем прогноз с реальными данными
-        const lastPrice = currentHistoricalData.prices[currentHistoricalData.prices.length - 1];
-        const actualPrices = validationData.prices;
-        
-        const forecastPrices = [];
-        for (let i = 1; i <= Math.min(forecast.horizon, actualPrices.length); i++) {
-            const predictedPrice = lastPrice * (1 + (forecast.mu / 100) * i);
-            forecastPrices.push(predictedPrice);
+        if (!historicalResponse.ok) {
+            throw new Error('Не удалось получить исторические данные');
         }
         
-        // Вычисляем метрики точности
-        const mape = calculateMAPE(actualPrices.slice(0, forecastPrices.length), forecastPrices);
-        const rmse = calculateRMSE(actualPrices.slice(0, forecastPrices.length), forecastPrices);
-        const accuracy = Math.max(0, 100 - mape);
+        const historicalData = await historicalResponse.json();
         
-        displayValidationResults(actualPrices, forecastPrices, mape, rmse, accuracy);
+        if (!historicalData.prices || historicalData.prices.length === 0) {
+            throw new Error('Недостаточно исторических данных для прогнозирования');
+        }
+        
+        // Используем только данные до выбранной точки
+        const pricesForForecast = historicalData.prices.slice(0, startIndex + 1);
+        
+        // Создаем прогноз
+        const forecastResponse = await fetch('/api/forecast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prices: pricesForForecast,
+                methods: selectedMethods,
+                horizons: [horizon],
+                lookback: lookback
+            })
+        });
+        
+        if (!forecastResponse.ok) {
+            throw new Error('Ошибка при создании прогноза');
+        }
+        
+        const forecastData = await forecastResponse.json();
+        
+        // Отображаем результаты с указанной точкой начала
+        displayForecastResults(forecastData, historicalData, symbol, startIndex);
+        
+        showSuccess(`Прогноз создан из точки ${startIndex}`);
         
     } catch (error) {
-        console.error('Ошибка валидации:', error);
-        showError('Ошибка при валидации прогноза: ' + error.message);
+        console.error('Ошибка:', error);
+        showError(error.message);
     }
-}
-
-function calculateMAPE(actual, predicted) {
-    let sum = 0;
-    for (let i = 0; i < actual.length; i++) {
-        sum += Math.abs((actual[i] - predicted[i]) / actual[i]);
-    }
-    return (sum / actual.length) * 100;
-}
-
-function calculateRMSE(actual, predicted) {
-    let sum = 0;
-    for (let i = 0; i < actual.length; i++) {
-        sum += Math.pow(actual[i] - predicted[i], 2);
-    }
-    return Math.sqrt(sum / actual.length);
-}
-
-function displayValidationResults(actualPrices, forecastPrices, mape, rmse, accuracy) {
-    const container = document.getElementById('validationResults');
-    
-    const accuracyClass = accuracy > 80 ? 'text-success' : accuracy > 60 ? 'text-warning' : 'text-danger';
-    
-    container.innerHTML = `
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h3 class="${accuracyClass}">${accuracy.toFixed(1)}%</h3>
-                        <p class="text-muted mb-0">Точность прогноза</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h3 class="text-info">${mape.toFixed(2)}%</h3>
-                        <p class="text-muted mb-0">MAPE</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h3 class="text-warning">${rmse.toFixed(6)}</h3>
-                        <p class="text-muted mb-0">RMSE</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h3 class="text-primary">${forecastPrices.length}</h3>
-                        <p class="text-muted mb-0">Точек сравнения</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="mt-4">
-            <h6>Интерпретация точности:</h6>
-            <ul>
-                <li><strong>Точность ${accuracy.toFixed(1)}%:</strong> ${accuracy > 80 ? 'Отличная' : accuracy > 60 ? 'Хорошая' : 'Низкая'}</li>
-                <li><strong>MAPE ${mape.toFixed(2)}%:</strong> ${mape < 5 ? 'Очень низкая ошибка' : mape < 10 ? 'Низкая ошибка' : 'Высокая ошибка'}</li>
-                <li><strong>RMSE ${rmse.toFixed(6)}:</strong> ${rmse < 0.001 ? 'Очень низкая' : rmse < 0.01 ? 'Низкая' : 'Высокая'} волатильность ошибок</li>
-            </ul>
-        </div>
-    `;
-    
-    // Создаем график сравнения
-    createValidationChart(actualPrices, forecastPrices);
-}
-
-function createValidationChart(actualPrices, forecastPrices) {
-    const timestamps = Array.from({length: Math.max(actualPrices.length, forecastPrices.length)}, (_, i) => i);
-    
-    const traces = [
-        {
-            x: timestamps.slice(0, actualPrices.length),
-            y: actualPrices,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Реальные данные',
-            line: {
-                color: '#dc3545',
-                width: 3
-            },
-            marker: {
-                size: 6,
-                color: '#dc3545'
-            }
-        },
-        {
-            x: timestamps.slice(0, forecastPrices.length),
-            y: forecastPrices,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Прогноз',
-            line: {
-                color: '#28a745',
-                width: 3,
-                dash: 'dash'
-            },
-            marker: {
-                size: 6,
-                color: '#28a745'
-            }
-        }
-    ];
-    
-    const layout = {
-        title: 'Сравнение прогноза с реальными данными',
-        xaxis: { 
-            title: 'Время',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        yaxis: { 
-            title: 'Цена',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        height: 400,
-        margin: { t: 50, b: 50, l: 50, r: 50 },
-        legend: {
-            x: 0.02,
-            y: 0.98
-        }
-    };
-    
-    // Добавляем график валидации под результатами
-    const validationChartDiv = document.createElement('div');
-    validationChartDiv.id = 'validationChart';
-    document.getElementById('validationResults').appendChild(validationChartDiv);
-    
-    Plotly.newPlot('validationChart', traces, layout, {responsive: true});
 }
 
 function showLoading(elementId) {
@@ -595,11 +745,52 @@ function hideLoading(elementId) {
 }
 
 function showSuccess(message) {
-    alert('✅ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
 }
 
 function showError(message) {
-    alert('❌ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
 }
+
+function initializeTooltips() {
+    // Инициализация Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}
+
+// Инициализация tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTooltips();
+});
 </script>
 {% endblock %} 

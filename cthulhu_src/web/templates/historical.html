@@ -35,7 +35,7 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <label for="historicalExchange" class="form-label">Биржа</label>
-                                <select class="form-select" id="historicalExchange" required>
+                                <select class="form-select" id="historicalExchange" onchange="loadSymbolsForHistoricalExchange()" required>
                                     <option value="">Выберите биржу...</option>
                                     <option value="binance">Binance</option>
                                     <option value="yobit">Yobit</option>
@@ -48,34 +48,51 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="historicalSymbol" class="form-label">Торговая пара</label>
-                                <input type="text" class="form-control" id="historicalSymbol" list="historicalSymbolList" placeholder="BTC/USDT" required data-bs-toggle="tooltip" title="Выберите валюту из списка или введите пару">
-                                <datalist id="historicalSymbolList"></datalist>
+                                <div class="symbol-selector">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="historicalSymbolSearch" placeholder="Поиск торговой пары..." onkeyup="filterHistoricalSymbols()" data-bs-toggle="tooltip" title="Введите название торговой пары для поиска">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="loadHistoricalSymbols()" data-bs-toggle="tooltip" title="Обновить список пар">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <div class="symbol-dropdown" id="historicalSymbolDropdown" style="display: none;">
+                                        <div class="symbol-list" id="historicalSymbolList">
+                                            <!-- Торговые пары будут загружены динамически -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="historicalSymbol" required>
+                                <div id="selectedHistoricalSymbolDisplay" class="mt-2"></div>
                             </div>
                             <div class="col-md-4">
                                 <label for="historicalHours" class="form-label">Часов истории</label>
-                                <input type="number" class="form-control" id="historicalHours" value="24" min="1" max="168" required>
+                                <input type="number" class="form-control" id="historicalHours" value="24" min="1" max="168" required data-bs-toggle="tooltip" title="Количество часов исторических данных">
                             </div>
                         </div>
                         
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="historicalFormat" class="form-label">Формат данных</label>
-                                <select class="form-select" id="historicalFormat">
+                                <select class="form-select" id="historicalFormat" data-bs-toggle="tooltip" title="Выберите формат возвращаемых данных">
                                     <option value="prices" selected>Только цены</option>
                                     <option value="ohlcv">OHLCV</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="historicalSymbolHelp" class="form-label">Примеры торговых пар</label>
-                                <div class="form-text">
-                                    BTC/USDT, ETH/USDT, ADA/BTC, SOL/USDT
+                                <label class="form-label">Популярные пары</label>
+                                <div class="popular-symbols">
+                                    <span class="badge bg-light text-dark me-1 mb-1" onclick="selectPopularSymbol('BTC/USDT')">BTC/USDT</span>
+                                    <span class="badge bg-light text-dark me-1 mb-1" onclick="selectPopularSymbol('ETH/USDT')">ETH/USDT</span>
+                                    <span class="badge bg-light text-dark me-1 mb-1" onclick="selectPopularSymbol('ADA/BTC')">ADA/BTC</span>
+                                    <span class="badge bg-light text-dark me-1 mb-1" onclick="selectPopularSymbol('SOL/USDT')">SOL/USDT</span>
+                                    <span class="badge bg-light text-dark me-1 mb-1" onclick="selectPopularSymbol('BNB/USDT')">BNB/USDT</span>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="row mt-3">
                             <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <i class="fas fa-download"></i>
                                     Загрузить данные
                                 </button>
@@ -106,12 +123,12 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-info-circle"></i>
-                        Статистика данных
+                        Информация о данных
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div id="historicalStats">
-                        <p class="text-muted">Загрузите данные для получения статистики</p>
+                    <div id="historicalInfo">
+                        <p class="text-muted">Выберите параметры для получения информации о данных</p>
                     </div>
                 </div>
             </div>
@@ -124,12 +141,12 @@
                 <div class="card-header bg-success text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-chart-line"></i>
-                        График исторических данных
+                        Результаты
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div id="historicalChart">
-                        <p class="text-muted">График появится после загрузки данных</p>
+                    <div id="historicalResults">
+                        <p class="text-muted">Исторические данные появятся здесь</p>
                     </div>
                 </div>
             </div>
@@ -137,63 +154,296 @@
     </div>
 </div>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', loadHistoricalCurrencies);
-document.getElementById('historicalExchange').addEventListener('change', loadHistoricalCurrencies);
+<style>
+.symbol-selector {
+    position: relative;
+}
 
-async function loadHistoricalCurrencies() {
+.symbol-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.symbol-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.symbol-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.symbol-item:hover {
+    background-color: #f8f9fa;
+}
+
+.symbol-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.symbol-item:last-child {
+    border-bottom: none;
+}
+
+.selected-symbol-badge {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+
+.loading {
+    background: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.popular-symbols .badge {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.popular-symbols .badge:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    transform: scale(1.05);
+}
+
+.chart-container {
+    height: 400px;
+    margin: 20px 0;
+}
+
+.data-table {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.data-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.data-stats .stat-item {
+    text-align: center;
+    padding: 10px;
+}
+
+.data-stats .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.data-stats .stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+
+<script>
+// Загрузка символов при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTooltips();
+});
+
+let historicalAllSymbols = [];
+let historicalCurrentExchange = '';
+let historicalSelectedSymbol = '';
+
+async function loadSymbolsForHistoricalExchange() {
     const exchange = document.getElementById('historicalExchange').value;
-    const list = document.getElementById('historicalSymbolList');
-    list.innerHTML = '';
-    try {
-        const response = await fetch(`/api/currencies/${exchange}`);
-        const data = await response.json();
-        data.currencies.forEach(cur => {
-            const option = document.createElement('option');
-            option.value = `${cur}/USDT`;
-            list.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Ошибка загрузки валют', err);
+    historicalCurrentExchange = exchange;
+    historicalSelectedSymbol = '';
+    updateSelectedHistoricalSymbolDisplay();
+    
+    if (exchange) {
+        await loadHistoricalSymbols();
     }
 }
+
+async function loadHistoricalSymbols() {
+    try {
+        const exchange = document.getElementById('historicalExchange').value;
+        if (!exchange) {
+            showError('Сначала выберите биржу');
+            return;
+        }
+        
+        const response = await fetch(`/api/currencies/${exchange}`);
+        const data = await response.json();
+        
+        // Получаем торговые пары из валют
+        historicalAllSymbols = [];
+        const currencies = data.currencies;
+        
+        // Создаем популярные торговые пары
+        const popularQuotes = ['USDT', 'BTC', 'ETH', 'USD', 'USDC', 'BNB'];
+        
+        currencies.forEach(base => {
+            popularQuotes.forEach(quote => {
+                if (base !== quote) {
+                    historicalAllSymbols.push(`${base}/${quote}`);
+                }
+            });
+        });
+        
+        // Убираем дубликаты и сортируем
+        historicalAllSymbols = [...new Set(historicalAllSymbols)].sort();
+        updateHistoricalSymbolList();
+        
+        console.log(`Загружено ${historicalAllSymbols.length} торговых пар для биржи ${exchange}`);
+    } catch (error) {
+        console.error('Ошибка загрузки торговых пар:', error);
+        showError('Ошибка загрузки списка торговых пар');
+    }
+}
+
+function updateHistoricalSymbolList() {
+    const symbolList = document.getElementById('historicalSymbolList');
+    symbolList.innerHTML = '';
+    
+    historicalAllSymbols.forEach(symbol => {
+        const item = document.createElement('div');
+        item.className = 'symbol-item';
+        item.textContent = symbol;
+        item.onclick = () => selectHistoricalSymbol(symbol);
+        symbolList.appendChild(item);
+    });
+}
+
+function filterHistoricalSymbols() {
+    const searchTerm = document.getElementById('historicalSymbolSearch').value.toLowerCase();
+    const symbolList = document.getElementById('historicalSymbolList');
+    const items = symbolList.querySelectorAll('.symbol-item');
+    
+    items.forEach(item => {
+        const symbol = item.textContent.toLowerCase();
+        if (symbol.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Показываем дропдаун при вводе
+    if (searchTerm.length > 0) {
+        showHistoricalSymbolDropdown();
+    }
+}
+
+function showHistoricalSymbolDropdown() {
+    document.getElementById('historicalSymbolDropdown').style.display = 'block';
+}
+
+function hideHistoricalSymbolDropdown() {
+    document.getElementById('historicalSymbolDropdown').style.display = 'none';
+}
+
+function selectHistoricalSymbol(symbol) {
+    historicalSelectedSymbol = symbol;
+    document.getElementById('historicalSymbol').value = symbol;
+    document.getElementById('historicalSymbolSearch').value = symbol;
+    updateSelectedHistoricalSymbolDisplay();
+    hideHistoricalSymbolDropdown();
+}
+
+function selectPopularSymbol(symbol) {
+    historicalSelectedSymbol = symbol;
+    document.getElementById('historicalSymbol').value = symbol;
+    document.getElementById('historicalSymbolSearch').value = symbol;
+    updateSelectedHistoricalSymbolDisplay();
+}
+
+function updateSelectedHistoricalSymbolDisplay() {
+    const display = document.getElementById('selectedHistoricalSymbolDisplay');
+    if (historicalSelectedSymbol) {
+        display.innerHTML = `<span class="selected-symbol-badge">
+            <i class="fas fa-check"></i> ${historicalSelectedSymbol}
+        </span>`;
+    } else {
+        display.innerHTML = '';
+    }
+}
+
+// Обработчики событий для поиска торговых пар
+document.getElementById('historicalSymbolSearch').addEventListener('focus', function() {
+    if (this.value.length > 0) {
+        showHistoricalSymbolDropdown();
+    }
+});
+
+document.getElementById('historicalSymbolSearch').addEventListener('blur', function() {
+    // Небольшая задержка, чтобы успеть кликнуть на элемент
+    setTimeout(hideHistoricalSymbolDropdown, 200);
+});
+
 // Обработка формы исторических данных
 document.getElementById('historicalForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const exchange = document.getElementById('historicalExchange').value;
     const symbol = document.getElementById('historicalSymbol').value;
-    
-    if (!exchange || !symbol) {
-        showError('Пожалуйста, заполните все обязательные поля');
+    if (!symbol) {
+        showError('Пожалуйста, выберите торговую пару');
         return;
     }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
     
     showLoading('historicalLoading');
     updateHistoricalProgress(0, 'Загрузка исторических данных...');
     
     try {
-        const hours = document.getElementById('historicalHours').value;
+        const exchange = document.getElementById('historicalExchange').value;
+        const hours = parseInt(document.getElementById('historicalHours').value);
         const format = document.getElementById('historicalFormat').value;
         
-        const response = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${hours}&format=${format}`);
+        const response = await fetch(`/api/historical-data/${exchange}?symbol=${encodeURIComponent(symbol)}&hours=${hours}&format=${format}&timeframe=1m`);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || 'Не удалось получить исторические данные';
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
+        
         updateHistoricalProgress(100, 'Данные загружены');
         
-        displayHistoricalData(data, symbol);
+        displayHistoricalResults(data, symbol);
         showSuccess('Исторические данные успешно загружены!');
         
     } catch (error) {
         console.error('Ошибка:', error);
         showError('Ошибка при загрузке данных: ' + error.message);
     } finally {
-        setTimeout(() => hideLoading('historicalLoading'), 500);
+        setTimeout(() => {
+            hideLoading('historicalLoading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-download"></i> Загрузить данные';
+        }, 500);
     }
 });
 
@@ -211,13 +461,14 @@ function updateHistoricalProgress(percent, text) {
     }
 }
 
-function displayHistoricalData(data, symbol) {
-    const statsContainer = document.getElementById('historicalStats');
-    const chartContainer = document.getElementById('historicalChart');
+function displayHistoricalResults(data, symbol) {
+    // Получаем количество часов из DOM
+    const hours = parseInt(document.getElementById('historicalHours').value);
+    const container = document.getElementById('historicalResults');
+    const infoContainer = document.getElementById('historicalInfo');
     
     if (!data.prices || data.prices.length === 0) {
-        statsContainer.innerHTML = '<p class="text-muted">Нет данных для отображения</p>';
-        chartContainer.innerHTML = '<p class="text-muted">Нет данных для графика</p>';
+        container.innerHTML = '<p class="text-muted">Исторические данные не найдены</p>';
         return;
     }
     
@@ -227,67 +478,73 @@ function displayHistoricalData(data, symbol) {
     const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
     const priceChange = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
     
-    // Статистика
-    statsContainer.innerHTML = `
-        <div class="row text-center">
-            <div class="col-6">
-                <h4 class="text-primary">${prices.length}</h4>
-                <small class="text-muted">Точек данных</small>
+    // Информация о данных
+    infoContainer.innerHTML = `
+        <div class="data-stats">
+            <div class="row">
+                <div class="col-6">
+                    <div class="stat-item">
+                        <div class="stat-value">${prices.length}</div>
+                        <div class="stat-label">Точек данных</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="stat-item">
+                        <div class="stat-value">${hours}</div>
+                        <div class="stat-label">Часов истории</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-6">
-                <h4 class="${priceChange > 0 ? 'text-success' : 'text-danger'}">${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%</h4>
-                <small class="text-muted">Изменение</small>
-            </div>
-        </div>
-        <hr>
-        <div class="row text-center">
-            <div class="col-4">
-                <h6 class="text-info">${minPrice.toFixed(4)}</h6>
-                <small class="text-muted">Мин</small>
-            </div>
-            <div class="col-4">
-                <h6 class="text-success">${avgPrice.toFixed(4)}</h6>
-                <small class="text-muted">Среднее</small>
-            </div>
-            <div class="col-4">
-                <h6 class="text-warning">${maxPrice.toFixed(4)}</h6>
-                <small class="text-muted">Макс</small>
+            <hr>
+            <div class="row">
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="stat-value">${minPrice.toFixed(4)}</div>
+                        <div class="stat-label">Мин. цена</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="stat-value">${maxPrice.toFixed(4)}</div>
+                        <div class="stat-label">Макс. цена</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-item">
+                        <div class="stat-value ${priceChange > 0 ? 'text-success' : 'text-danger'}">${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%</div>
+                        <div class="stat-label">Изменение</div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
     
-    // График
-    const timestamps = Array.from({length: prices.length}, (_, i) => i);
-    
+    // Создаем график
     const trace = {
-        x: timestamps,
+        x: Array.from({length: prices.length}, (_, i) => i),
         y: prices,
         type: 'scatter',
         mode: 'lines',
-        name: symbol,
-        line: {
-            color: '#667eea',
-            width: 2
-        }
+        name: 'Цена',
+        line: {color: '#007bff'}
     };
     
     const layout = {
-        title: `Исторические данные: ${symbol}`,
-        xaxis: { 
-            title: 'Время',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        yaxis: { 
-            title: 'Цена',
-            showgrid: true,
-            gridcolor: '#f0f0f0'
-        },
-        height: 400,
-        margin: { t: 50, b: 50, l: 50, r: 50 }
+        title: `Исторические данные для ${symbol}`,
+        xaxis: {title: 'Время'},
+        yaxis: {title: 'Цена'},
+        hovermode: 'x unified'
     };
     
-    Plotly.newPlot(chartContainer, [trace], layout, {responsive: true});
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false
+    };
+    
+    container.innerHTML = '<div id="historicalChart" class="chart-container"></div>';
+    
+    Plotly.newPlot('historicalChart', [trace], layout, config);
 }
 
 function showLoading(elementId) {
@@ -299,11 +556,47 @@ function hideLoading(elementId) {
 }
 
 function showSuccess(message) {
-    alert('✅ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
 }
 
 function showError(message) {
-    alert('❌ ' + message);
+    // Улучшенное уведомление
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+
+function initializeTooltips() {
+    // Инициализация Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 }
 </script>
 {% endblock %} 

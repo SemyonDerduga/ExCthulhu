@@ -65,7 +65,7 @@ async function testExchanges() {
 
 async function testHistoricalData() {
     try {
-        const response = await fetch('/api/historical-data/binance/BTC%2FUSDT?hours=1&format=prices');
+        const response = await fetch('/api/historical-data/binance/BTC%2FUSDT?hours=1&format=prices&timeframe=1m');
         const data = await response.json();
         displayResult('GET /api/historical-data/binance/BTC/USDT', data);
     } catch (error) {
@@ -75,16 +75,28 @@ async function testHistoricalData() {
 
 async function testForecast() {
     try {
+        // Сначала получаем реальные исторические данные
+        const historicalResponse = await fetch('/api/historical-data/binance/BTC%2FUSDT?hours=24&format=prices&timeframe=1m');
+        if (!historicalResponse.ok) {
+            throw new Error('Не удалось получить исторические данные');
+        }
+        
+        const historicalData = await historicalResponse.json();
+        if (!historicalData.prices || historicalData.prices.length < 10) {
+            throw new Error('Недостаточно исторических данных для прогнозирования');
+        }
+        
+        // Используем реальные данные для прогнозирования
         const response = await fetch('/api/forecast', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                prices: [50000, 50100, 50200, 50300, 50400],
+                prices: historicalData.prices,
                 methods: ["mean"],
                 horizons: [5],
-                lookback: 60
+                lookback: Math.min(30, Math.floor(historicalData.prices.length * 0.8))
             })
         });
         const data = await response.json();
