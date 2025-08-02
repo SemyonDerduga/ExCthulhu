@@ -2,12 +2,14 @@
 Основное FastAPI приложение для веб-интерфейса Exchange Cthulhu.
 """
 
+import logging
+import os
+
+import uvicorn
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-import uvicorn
-import logging
 
 from cthulhu_src.web.routes import api, pages, progress
 
@@ -23,7 +25,6 @@ app = FastAPI(
 )
 
 # Подключение статических файлов
-import os
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -56,4 +57,4 @@ def run_web_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = True)
 
 
 if __name__ == "__main__":
-    run_web_server() 
+    run_web_server()

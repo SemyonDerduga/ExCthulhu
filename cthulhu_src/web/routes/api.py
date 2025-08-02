@@ -2,25 +2,22 @@
 API маршруты для получения данных.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
-from cthulhu_src.services.historical_data import MultiExchangeHistoricalService
-from cthulhu_src.services.forecast import ForecastService
-from cthulhu_src.services.exchange_manager import ExchangeManager
-from cthulhu_src.services.progress_exchange_manager import ProgressExchangeManager
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+
 from cthulhu_src.services.cross_exchange_manager import get_free_transitions
+from cthulhu_src.services.forecast import ForecastService
+from cthulhu_src.services.historical_data import MultiExchangeHistoricalService
+from cthulhu_src.services.progress_exchange_manager import ProgressExchangeManager
 from cthulhu_src.web.routes.progress import update_progress
 
 logger = logging.getLogger("excthulhu")
 
 router = APIRouter()
-
-# Pydantic модели для API запросов
-from pydantic import BaseModel
 
 
 class ForecastArbitrageRequest(BaseModel):
